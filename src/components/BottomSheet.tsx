@@ -267,8 +267,8 @@ export default function BottomSheet({ isOpen, onClose, pokemon }: BottomSheetPro
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end bg-black/60 backdrop-blur-sm">
-      <div className="bg-white dark:bg-gray-900 w-full max-h-[90vh] overflow-hidden rounded-t-3xl shadow-2xl">
+    <div className={`fixed inset-0 z-50 flex items-end bg-black/60 backdrop-blur-sm transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+      <div className={`bg-white dark:bg-gray-900 w-full max-h-[90vh] overflow-hidden rounded-t-3xl shadow-2xl transform transition-transform duration-300 ${isOpen ? 'translate-y-0' : 'translate-y-full'}`}>
         {/* Header */}
         <div className="bg-gradient-to-r from-blue-600 to-cyan-600 px-4 py-4 flex items-center justify-between">
           <div className="flex items-center space-x-3">
@@ -278,11 +278,18 @@ export default function BottomSheet({ isOpen, onClose, pokemon }: BottomSheetPro
                 alt={pokemon.name}
                 className="w-12 h-12 sm:w-16 sm:h-16"
               />
-              {customData.shiny && (
-                <div className="absolute -top-1 -right-1 bg-yellow-400 rounded-full p-1">
-                  <span className="text-xs">✨</span>
-                </div>
-              )}
+              <div className="absolute -top-1 -right-1 flex gap-1">
+                {customData.shiny && (
+                  <div className="bg-white/80 backdrop-blur-sm rounded-full p-1 shadow-sm">
+                    <span className="text-xs">✨</span>
+                  </div>
+                )}
+                {customData.alpha && (
+                  <div className="bg-white/80 backdrop-blur-sm rounded-full p-1 shadow-sm">
+                    <span className="text-xs">🌟</span>
+                  </div>
+                )}
+              </div>
             </div>
             <div>
               <h3 className="text-white font-bold text-lg sm:text-xl">

@@ -21,17 +21,43 @@ export default function Home() {
   const [showOwnedOnly, setShowOwnedOnly] = useState(false);
   const [sortBy, setSortBy] = useState('id');
 
+  // Generate all Pokemon IDs from 1 to 1025
+  const allPokemonIds = Array.from({ length: 1025 }, (_, i) => i + 1);
+
   const gamePokemonIds: { [key: string]: number[] } = {
-    all: [25, 6, 150, 94, 149, 448, 658, 887, 898, 248, 445, 143, 778, 4, 1, 94, 115, 131, 142, 181, 212, 214, 229, 248, 282, 303, 306, 308, 310, 354, 376, 384, 414, 426, 428, 445, 448, 460, 475, 479, 487, 497, 508, 521, 531, 534, 617],
-    'legends-za': [25, 6, 150, 94, 149, 448, 658, 887, 898, 248, 445, 143, 778, 4, 1, 115, 131, 142, 181, 212, 214, 229, 282, 303, 306, 308, 310, 354, 376, 384, 414, 426, 428, 460, 475, 479, 487, 497, 508, 521, 531, 534, 617],
-    'scarlet-violet': [25, 6, 150, 94, 149, 448, 658, 887, 898, 248, 445, 143, 778, 4, 1, 115, 131, 142, 181, 212, 214, 229, 282, 303, 306, 308, 310, 354, 376, 384, 414, 426, 428, 460, 475, 479, 487, 497, 508, 521, 531, 534, 617],
-    'sword-shield': [25, 6, 150, 94, 149, 445, 143, 131, 212, 214, 229, 248, 282, 303, 306, 308, 310, 354, 376, 384, 414, 426, 428, 460, 475, 479, 487, 497, 508, 521, 531, 534, 617, 778, 4, 1, 115, 142, 181],
-    'bdsp': [25, 6, 150, 94, 149, 445, 143, 4, 1, 131, 115, 142, 181, 212, 214, 229, 248, 282, 303, 306, 308, 310, 354, 376, 384, 414, 426, 428, 460, 475, 479, 487, 497, 508, 521, 531, 534, 617, 778],
-    'legends-arceus': [25, 6, 150, 94, 149, 448, 898, 248, 445, 143, 778, 4, 1, 115, 131, 142, 181, 212, 214, 229, 248, 282, 303, 306, 308, 310, 354, 376, 384, 414, 426, 428, 460, 475, 479, 487, 497, 508, 521, 531, 534, 617],
-    'lets-go': [25, 6, 150, 94, 143, 4, 1, 115, 131, 142, 181, 212, 214, 229, 248, 282, 303, 306, 308, 310, 354, 376, 384, 414, 426, 428, 460, 475, 479, 487, 497, 508, 521, 531, 534, 617, 778, 445, 149, 248]
+    all: allPokemonIds,
+    'legends-za': allPokemonIds,
+    'scarlet-violet': allPokemonIds,
+    'sword-shield': allPokemonIds,
+    'bdsp': allPokemonIds,
+    'legends-arceus': allPokemonIds,
+    'lets-go': allPokemonIds
   };
 
-  const legendaryMythicalIds = [150, 151, 249, 250, 382, 383, 384, 385, 480, 481, 482, 483, 484, 485, 486, 487, 488, 489, 490, 491, 492, 493, 494, 495, 496, 497, 643, 644, 645, 646, 647, 648, 649, 716, 717, 718, 719, 720, 721, 772, 773, 774, 775, 778, 785, 786, 787, 788, 789, 790, 791, 792, 793, 794, 795, 796, 797, 798, 799, 800, 801, 802, 803, 804, 805, 806, 807, 808, 809, 810, 811, 812, 813, 814, 815, 816, 817, 818, 819, 820, 821, 822, 823, 824, 825, 826, 827, 828, 829, 830, 831, 832, 833, 834, 887, 888, 889, 890, 891, 892, 893, 894, 895, 896, 897, 898, 899, 900, 901, 902, 903, 904, 905, 906, 1008, 1009, 1010];
+  const legendaryMythicalIds = [
+    // Generation 1
+    144, 145, 146, 150, 151,
+    // Generation 2  
+    243, 244, 245, 249, 250, 251,
+    // Generation 3
+    377, 378, 379, 380, 381, 382, 383, 384, 385, 386,
+    // Generation 4
+    480, 481, 482, 483, 484, 485, 486, 487, 488, 489, 490, 491, 492, 493, 494,
+    // Generation 5
+    638, 639, 640, 641, 642, 643, 644, 645, 646, 647, 648, 649,
+    // Generation 6
+    716, 717, 718, 719, 720, 721,
+    // Generation 7
+    772, 773, 774, 775, 778, 785, 786, 787, 788, 789, 790, 791, 792, 793, 794, 795, 796, 797, 798, 799, 800, 801, 802, 803, 804, 805, 806, 807, 808, 809, 810, 811, 812, 813, 814, 815, 816, 817, 818, 819, 820, 821, 822, 823, 824, 825, 826, 827, 828, 829, 830, 831, 832, 833, 834,
+    // Generation 8
+    887, 888, 889, 890, 891, 892, 893, 894, 895, 896, 897, 898,
+    // Generation 9
+    899, 900, 901, 902, 903, 904, 905, 906, 1008, 1009, 1010,
+    // Paradox Pokemon (considered legendary-like)
+    983, 984, 985, 986, 987, 988, 989, 990, 991, 992, 993, 994, 995, 996,
+    // Ultra Beasts (legendary-like)
+    794, 795, 796, 797, 798, 799, 800, 801, 802, 803, 804
+  ];
 
   const loadPokemon = async (startOffset: number = 0, append: boolean = false) => {
     try {
@@ -48,10 +74,10 @@ export default function Home() {
       }
       
       if (showShinyOnly) {
-        // For demo purposes, we'll show a subset of Pokemon as "shiny"
-        // In a real app, this would come from user data
-        const shinyPokemonIds = [25, 6, 150, 94, 149, 448, 658, 887, 898, 248];
-        allIds = allIds.filter(id => shinyPokemonIds.includes(id));
+        // For demo purposes, show some popular Pokemon as "shiny available"
+        // In a real app, this would come from user data or API
+        const shinyAvailablePokemonIds = [25, 6, 150, 94, 149, 448, 658, 887, 898, 248, 445, 143, 778, 4, 1, 115, 131, 142, 181, 212, 214, 229, 282, 303, 306, 308, 310, 354, 376, 384, 414, 426, 428, 445, 460, 475, 479, 487, 497, 508, 521, 531, 534, 617, 718, 720, 773, 785, 788, 791, 794, 797, 800, 803, 806, 809, 812, 815, 818, 821, 824, 827, 830, 833, 888, 891, 894, 897, 900, 903, 906];
+        allIds = allIds.filter(id => shinyAvailablePokemonIds.includes(id));
       }
       
       if (showOwnedOnly) {
@@ -61,7 +87,7 @@ export default function Home() {
         allIds = allIds.filter(id => ownedPokemonIds.includes(id));
       }
 
-      const idsToLoad = allIds.slice(startOffset, startOffset + 8);
+      const idsToLoad = allIds.slice(startOffset, startOffset + 40);
       console.log('Loading Pokemon from offset', startOffset, 'IDs:', idsToLoad);
       
       const pokemonPromises = idsToLoad.map((id: number) => 
@@ -186,28 +212,28 @@ export default function Home() {
   ];
 
 return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white dark:from-gray-900 dark:to-gray-800 transition-colors duration-300">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-[#f5f5f0] dark:from-gray-900 dark:to-gray-800 transition-colors duration-300">
         <Header />
 
 {/* Pokemon Showcase Section */}
-        <section className="bg-gray-50 dark:bg-gray-800 transition-colors duration-300">
+        <section className="bg-[#fafaf8] dark:bg-gray-800 transition-colors duration-300">
          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
 {/* Controls Header */}
             <div className="py-3 sm:py-4">
-               <div className="flex flex-col sm:flex-row flex-wrap justify-center gap-3 sm:gap-4 items-start sm:items-center bg-white dark:bg-gray-700 rounded-xl shadow-sm border border-gray-200 dark:border-gray-600 p-3 sm:p-4 transition-colors duration-300">
+                <div className="flex flex-col sm:flex-row flex-wrap justify-center gap-3 sm:gap-4 items-start sm:items-center bg-[#fafaf8] dark:bg-gray-700 rounded-xl shadow-sm border border-[#e2e8e0] dark:border-gray-600 p-3 sm:p-4 transition-colors duration-300">
                  
                  {/* Dropdowns Row */}
                  <div className="flex flex-wrap gap-3 sm:gap-4 w-full sm:w-auto">
                    {/* Game Dropdown */}
                    <div className="relative flex-1 sm:flex-none min-w-[140px]">
-                     <select 
-                       value={selectedGame}
-                       onChange={(e) => {
-                         setSelectedGame(e.target.value);
-                         setOffset(0);
-                       }}
-                       className="w-full appearance-none bg-gray-50 border border-gray-300 text-gray-700 py-2 px-3 sm:px-4 pr-8 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent cursor-pointer hover:bg-gray-100 transition-colors text-sm"
-                     >
+                      <select 
+                        value={selectedGame}
+                        onChange={(e) => {
+                          setSelectedGame(e.target.value);
+                          setOffset(0);
+                        }}
+                        className="w-full appearance-none bg-[#f5f5f0] border border-[#e2e8e0] text-gray-700 py-2 px-3 sm:px-4 pr-8 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent cursor-pointer hover:bg-[#e8e8e3] transition-colors text-sm"
+                      >
                        <option value="all">All Games</option>
                        <option value="legends-za">Legends Z-A</option>
                        <option value="scarlet-violet">Scarlet & Violet</option>
@@ -225,14 +251,14 @@ return (
 
                    {/* Sort Dropdown */}
                    <div className="relative flex-1 sm:flex-none min-w-[120px]">
-                     <select 
-                       value={sortBy}
-                       onChange={(e) => {
-                         setSortBy(e.target.value);
-                         setOffset(0);
-                       }}
-                       className="w-full appearance-none bg-gray-50 border border-gray-300 text-gray-700 py-2 px-3 sm:px-4 pr-8 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent cursor-pointer hover:bg-gray-100 transition-colors text-sm"
-                     >
+                      <select 
+                        value={sortBy}
+                        onChange={(e) => {
+                          setSortBy(e.target.value);
+                          setOffset(0);
+                        }}
+                        className="w-full appearance-none bg-[#f5f5f0] border border-[#e2e8e0] text-gray-700 py-2 px-3 sm:px-4 pr-8 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent cursor-pointer hover:bg-[#e8e8e3] transition-colors text-sm"
+                      >
                        <option value="id">Sort by ID</option>
                        <option value="name">Sort by Name</option>
                        <option value="stats">Sort by Stats</option>
@@ -254,11 +280,11 @@ return (
                          setShowLegendaryOnly(!showLegendaryOnly);
                          setOffset(0);
                        }}
-                       className={`relative inline-flex h-5 w-9 sm:h-6 sm:w-11 items-center rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 ${
-                         showLegendaryOnly 
-                           ? 'bg-purple-600' 
-                           : 'bg-gray-300'
-                       }`}
+                        className={`relative inline-flex h-5 w-9 sm:h-6 sm:w-11 items-center rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 ${
+                          showLegendaryOnly 
+                            ? 'bg-purple-600' 
+                            : 'bg-gray-400'
+                        }`}
                      >
                        <span
                          className={`inline-block h-3 w-3 sm:h-4 sm:w-4 transform rounded-full bg-white transition-transform duration-200 ${
@@ -278,11 +304,11 @@ return (
                          setShowShinyOnly(!showShinyOnly);
                          setOffset(0);
                        }}
-                       className={`relative inline-flex h-5 w-9 sm:h-6 sm:w-11 items-center rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 ${
-                         showShinyOnly 
-                           ? 'bg-yellow-500' 
-                           : 'bg-gray-300'
-                       }`}
+                        className={`relative inline-flex h-5 w-9 sm:h-6 sm:w-11 items-center rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 ${
+                          showShinyOnly 
+                            ? 'bg-yellow-500' 
+                            : 'bg-gray-400'
+                        }`}
                      >
                        <span
                          className={`inline-block h-3 w-3 sm:h-4 sm:w-4 transform rounded-full bg-white transition-transform duration-200 ${
@@ -304,11 +330,11 @@ return (
                          setShowOwnedOnly(!showOwnedOnly);
                          setOffset(0);
                        }}
-                       className={`relative inline-flex h-5 w-9 sm:h-6 sm:w-11 items-center rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 ${
-                         showOwnedOnly 
-                           ? 'bg-green-600' 
-                           : 'bg-gray-300'
-                       }`}
+                        className={`relative inline-flex h-5 w-9 sm:h-6 sm:w-11 items-center rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 ${
+                          showOwnedOnly 
+                            ? 'bg-green-600' 
+                            : 'bg-gray-400'
+                        }`}
                      >
                        <span
                          className={`inline-block h-3 w-3 sm:h-4 sm:w-4 transform rounded-full bg-white transition-transform duration-200 ${
@@ -330,8 +356,8 @@ return (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-3 sm:gap-4">
                 {[...Array(8)].map((_, index) => (
                   <div key={index} className="animate-pulse">
-                    <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
-                      <div className="h-40 sm:h-48 md:h-52 lg:h-56 bg-gradient-to-br from-gray-100 to-gray-200"></div>
+                    <div className="bg-[#fafaf8] rounded-2xl shadow-lg border border-[#e2e8e0] overflow-hidden">
+                      <div className="h-40 sm:h-48 md:h-52 lg:h-56 bg-gradient-to-br from-[#f5f5f0] to-[#e8e8e3]"></div>
                       <div className="p-3 sm:p-4 md:p-6 space-y-3 sm:space-y-4">
                         <div className="h-6 sm:h-8 bg-gray-200 rounded-lg"></div>
                         <div className="flex gap-2">
@@ -352,10 +378,10 @@ return (
                <div className="text-8xl mb-6">⚠️</div>
                <h3 className="text-2xl font-bold text-gray-900 mb-3">Unable to load Pokémon</h3>
                <p className="text-gray-600 mb-6">{error}</p>
-               <button 
-                 onClick={() => window.location.reload()}
-                 className="px-6 py-3 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 transition-colors"
-               >
+                <button 
+                  onClick={() => window.location.reload()}
+                  className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                >
                  Try Again
                </button>
              </div>
@@ -369,11 +395,11 @@ return (
              <>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-3 sm:gap-4 mb-8 sm:mb-12">
                      {popularPokemon.map((pokemon) => (
-                       <PokemonCard 
-                         key={pokemon.id} 
-                         pokemon={pokemon} 
-                         showShiny={true}
-                       />
+                        <PokemonCard 
+                          key={pokemon.id} 
+                          pokemon={pokemon} 
+                          showShiny={showShinyOnly}
+                        />
                      ))}
                    </div>
                
@@ -381,17 +407,17 @@ return (
                 <div className="text-center mt-8">
                   {loadingMore ? (
                     <div className="flex items-center justify-center space-x-2">
-                      <div className="w-8 h-8 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin"></div>
+                       <div className="w-8 h-8 border-4 border-green-500 border-t-transparent rounded-full animate-spin"></div>
                       <span className="text-gray-600">Loading more Pokémon...</span>
                     </div>
                   ) : hasMore ? (
                     <div className="flex flex-col items-center">
                       <div className="text-gray-500 mb-2">Scroll down for more Pokémon</div>
                       <div className="animate-bounce text-2xl">⬇️</div>
-                      <button 
-                        onClick={() => loadPokemon(offset, true)}
-                        className="mt-4 px-6 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 transition-colors"
-                      >
+                       <button 
+                         onClick={() => loadPokemon(offset, true)}
+                         className="mt-4 px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                       >
                         Load More
                       </button>
                     </div>

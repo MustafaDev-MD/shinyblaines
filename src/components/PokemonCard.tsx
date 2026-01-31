@@ -48,13 +48,13 @@ export default function PokemonCard({ pokemon, showShiny = false }: PokemonCardP
       setRipples(prev => prev.filter(r => r.id !== newRipple.id));
     }, 600);
     
-    setTimeout(() => setShowBottomSheet(true), 100);
+    setShowBottomSheet(true);
   };
 
   return (
     <>
       <div 
-        className="group relative bg-white dark:bg-gray-700 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500 transform cursor-pointer hover:-translate-y-1"
+        className="group relative bg-[#fafaf8] dark:bg-gray-700 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden border border-[#e2e8e0] dark:border-gray-600 hover:border-[#d4d4c8] dark:hover:border-gray-500 transform cursor-pointer hover:-translate-y-1"
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
         onClick={handleCardClick}
@@ -62,9 +62,16 @@ export default function PokemonCard({ pokemon, showShiny = false }: PokemonCardP
       {/* Shiny sparkles overlay */}
       {showShiny && isHovered && (
         <div className="absolute inset-0 pointer-events-none z-20">
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-yellow-300/30 to-transparent animate-pulse" />
+          {/* Subtle sparkling effect */}
+          <div className="absolute inset-0 overflow-hidden">
+            <div className="absolute top-1/4 left-1/4 w-1 h-1 bg-yellow-300 rounded-full animate-ping animation-duration-2000" />
+            <div className="absolute top-3/4 right-1/4 w-1 h-1 bg-yellow-200 rounded-full animate-ping animation-duration-3000 animation-delay-500" />
+            <div className="absolute top-1/2 right-1/3 w-1 h-1 bg-yellow-300 rounded-full animate-ping animation-duration-2500 animation-delay-1000" />
+            <div className="absolute bottom-1/4 left-1/3 w-1 h-1 bg-yellow-200 rounded-full animate-ping animation-duration-3500 animation-delay-1500" />
+            <div className="absolute top-1/3 left-1/2 w-1 h-1 bg-yellow-400 rounded-full animate-ping animation-duration-2000 animation-delay-2000" />
+          </div>
           <div className="absolute top-2 right-2 z-30">
-            <span className="px-3 py-1 bg-gradient-to-r from-yellow-400 to-yellow-600 text-white text-xs font-bold rounded-full shadow-lg animate-bounce">
+            <span className="px-2 py-1 bg-black/20 backdrop-blur-sm text-white text-xs font-bold rounded-full shadow-sm">
               ✨ Shiny
             </span>
           </div>
@@ -78,8 +85,8 @@ export default function PokemonCard({ pokemon, showShiny = false }: PokemonCardP
         </span>
       </div>
 
-      {/* Pokemon Image Container */}
-      <div className="relative h-40 sm:h-48 md:h-52 lg:h-56 flex items-center justify-center bg-gray-50 dark:bg-gray-800 p-4">
+       {/* Pokemon Image Container */}
+       <div className="relative h-40 sm:h-48 md:h-52 lg:h-56 flex items-center justify-center bg-[#f5f5f0] dark:bg-gray-800 p-4">
         {!isImageError ? (
           <div className="relative">
             <img
@@ -118,7 +125,7 @@ export default function PokemonCard({ pokemon, showShiny = false }: PokemonCardP
             height: '40px',
           }}
         >
-          <div className="w-full h-full rounded-full bg-cyan-400/30 scale-100 animate-ping" />
+          <div className="w-full h-full rounded-full bg-green-400/30 scale-100 animate-ping" />
         </div>
       ))}
     </div>
