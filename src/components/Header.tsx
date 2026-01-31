@@ -1,0 +1,189 @@
+'use client';
+
+import { useState } from 'react';
+import Link from 'next/link';
+import Image from 'next/image';
+import { useTheme } from '@/contexts/ThemeContext';
+import ThemeToggle from './ThemeToggle';
+
+export default function Header() {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { theme } = useTheme();
+
+  const navigation = [
+    { name: 'Home', href: '/', icon: '🏠' },
+    { name: 'Mystery Gift', href: '/mystery-gift', icon: '🎁' },
+    { name: 'Items', href: '/items', icon: '🎒' },
+    { name: 'Premium', href: '/premium', icon: '💎' },
+  ];
+
+  return (
+    <header className={`${theme === 'dark' ? 'bg-gradient-to-r from-cyan-500 to-teal-600' : 'bg-gradient-to-r from-blue-500 to-indigo-600'} shadow-lg transition-colors duration-300`}>
+      <nav className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="flex h-16 items-center justify-between">
+          {/* Logo */}
+          <div className="flex-shrink-0">
+            <Link href="/" className="flex items-center group">
+              <div className="relative w-12 h-12 shadow-md group-hover:shadow-lg transition-transform group-hover:scale-105">
+                <Image 
+                  src="/pokeball-logo.png" 
+                  alt="Pokeball Logo" 
+                  fill
+                  className="object-cover rounded-full"
+                  priority
+                />
+              </div>
+  
+              <span className="ml-3 text-xl font-bold text-white">
+                Shiny Blaines
+              </span>
+            </Link>
+          </div>
+
+          {/* Desktop Navigation */}
+          <div className="hidden md:block">
+            <div className="ml-10 flex items-baseline space-x-2">
+              {navigation.map((item) => (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  className="px-4 py-2 rounded-lg text-sm font-medium text-white hover:bg-white/20 hover:text-white transition-all duration-200 flex items-center space-x-2"
+                >
+                  <span>{item.icon}</span>
+                  <span>{item.name}</span>
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          {/* Search Bar - Desktop */}
+          <div className="hidden lg:flex items-center space-x-4">
+            <ThemeToggle />
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Search..."
+                className={`w-64 px-4 py-2 rounded-lg text-sm ${theme === 'dark' ? 'text-gray-900 bg-white/90 placeholder-gray-500 focus:ring-white focus:bg-white' : 'text-gray-900 bg-gray-100 placeholder-gray-600 focus:ring-gray-400 focus:bg-white'} transition-all duration-200 focus:outline-none focus:ring-2`}
+              />
+              <svg
+                className="absolute right-3 top-2.5 h-4 w-4 text-gray-500"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                />
+              </svg>
+            </div>
+            <button className="px-4 py-2 rounded-lg text-sm font-medium text-white border border-white/30 hover:bg-white/20 transition-all duration-200">
+              Sign In
+            </button>
+          </div>
+
+          {/* Tablet - Minimal Search */}
+          <div className="hidden md:flex lg:hidden items-center space-x-3">
+            <ThemeToggle />
+            <button className="px-3 py-2 rounded-lg text-sm font-medium text-white border border-white/30 hover:bg-white/20 transition-all duration-200">
+              Sign In
+            </button>
+          </div>
+
+          {/* Mobile menu button */}
+          <div className="flex items-center space-x-2 md:hidden">
+            <ThemeToggle />
+            <button
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              className="inline-flex items-center justify-center p-2 rounded-lg text-white hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white"
+              aria-expanded="false"
+            >
+              <span className="sr-only">Open main menu</span>
+              {!isMenuOpen ? (
+                <svg
+                  className="block h-6 w-6"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  aria-hidden="true"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 6h16M4 12h16M4 18h16"
+                  />
+                </svg>
+              ) : (
+                <svg
+                  className="block h-6 w-6"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  aria-hidden="true"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* Mobile Navigation */}
+        {isMenuOpen && (
+          <div className="md:hidden border-t border-white/20">
+            <div className="px-2 pt-4 pb-3 space-y-2">
+              {navigation.map((item) => (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  className="flex items-center space-x-3 px-3 py-3 rounded-lg text-base font-medium text-white hover:bg-white/20 transition-all duration-200"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  <span className="text-xl">{item.icon}</span>
+                  <span>{item.name}</span>
+                </Link>
+              ))}
+<div className="border-t border-white/20 pt-4 mt-4 space-y-2">
+                  <div className="relative px-3">
+                    <input
+                      type="text"
+                      placeholder="Search..."
+                      className="w-full px-4 py-3 rounded-lg text-base text-gray-900 bg-white/90 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-white focus:bg-white transition-all duration-200"
+                    />
+                    <svg
+                      className="absolute right-6 top-4 h-4 w-4 text-gray-500"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                      />
+                    </svg>
+                  </div>
+                  <button className="w-full flex items-center justify-center px-4 py-3 rounded-lg text-base font-medium text-white border border-white/30 hover:bg-white/20 transition-all duration-200">
+                    Sign In
+                  </button>
+                </div>
+            </div>
+          </div>
+        )}
+      </nav>
+    </header>
+  );
+}
