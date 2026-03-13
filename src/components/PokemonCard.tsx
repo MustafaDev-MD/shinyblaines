@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Pokemon, getPokemonImageUrl, formatPokemonName, getPokemonTypeColor } from '@/utils/pokemon';
+import { usePokedex } from '@/contexts/PokedexContext';
 import BottomSheet from './BottomSheet';
 
 interface PokemonCardProps {
@@ -14,6 +15,9 @@ export default function PokemonCard({ pokemon, showShiny = false }: PokemonCardP
   const [isImageError, setIsImageError] = useState(false);
   const [showBottomSheet, setShowBottomSheet] = useState(false);
   const [ripples, setRipples] = useState<{ x: number; y: number; id: number }[]>([]);
+  const { isOwned } = usePokedex();
+
+  const isPokemonOwned = isOwned(pokemon.id);
 
   const imageUrl = getPokemonImageUrl(pokemon, showShiny && isHovered);
   const formattedName = formatPokemonName(pokemon.name);
@@ -72,17 +76,22 @@ export default function PokemonCard({ pokemon, showShiny = false }: PokemonCardP
           </div>
           <div className="absolute top-2 right-2 z-30">
             <span className="px-2 py-1 bg-black/20 backdrop-blur-sm text-white text-xs font-bold rounded-full shadow-sm">
-              ✨ Shiny
+              <img src="/masklicon.png" alt="Shiny" className="w-6 h-6" />
             </span>
           </div>
         </div>
       )}
       
       {/* Pokemon ID Badge */}
-      <div className="absolute top-3 left-3 z-10">
-        <span className="px-3 py-1 bg-gradient-to-r from-gray-900 to-gray-700 text-white text-xs font-bold rounded-full shadow-md">
+      <div className="absolute top-3 left-3 z-10 flex items-center gap-1">
+        <span className="px-3 py-1 bg-gradient-to-r from-green-700 to-green-600 text-white text-xs font-bold rounded-full shadow-md">
           #{String(pokemon.id).padStart(3, '0')}
         </span>
+        {isPokemonOwned && (
+          <span className="px-2 py-1 bg-green-600 text-white text-xs font-bold rounded-full shadow-md" title="Owned - In My Pokédex">
+            🏐
+          </span>
+        )}
       </div>
 
        {/* Pokemon Image Container */}
@@ -108,7 +117,7 @@ export default function PokemonCard({ pokemon, showShiny = false }: PokemonCardP
 
       {/* Pokemon Info */}
       <div className="p-3 sm:p-4">
-        <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-gray-100 text-center">
+        <h3 className="text-base sm:text-lg font-bold text-green-900 dark:text-green-100 text-center">
           {formattedName}
         </h3>
       </div>

@@ -3,18 +3,29 @@
 import { useTheme } from '@/contexts/ThemeContext';
 
 export default function ThemeToggle() {
-  const { theme, toggleTheme } = useTheme();
+  const { theme, toggleTheme, mounted } = useTheme();
+
+  if (!mounted) {
+    return (
+      <div className="p-2 rounded-lg border bg-gray-200 dark:bg-gray-700" style={{ width: '40px', height: '40px' }} />
+    );
+  }
+
+  const handleToggle = () => {
+    toggleTheme();
+  };
 
   return (
     <button
-      onClick={toggleTheme}
-      className="p-2 rounded-lg border transition-all duration-200 hover:scale-110"
+      onClick={handleToggle}
+      className="p-2 rounded-lg border transition-all duration-200 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-green-400"
       style={{
         backgroundColor: theme === 'dark' ? '#374151' : '#f3f4f6',
         borderColor: theme === 'dark' ? '#4b5563' : '#d1d5db',
         color: theme === 'dark' ? '#f3f4f6' : '#374151'
       }}
       title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+      aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
     >
       {theme === 'dark' ? (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

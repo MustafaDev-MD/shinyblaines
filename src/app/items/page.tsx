@@ -36,7 +36,7 @@ export default function ItemsPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-white dark:bg-black">
       <Header />
       
       {/* Hero Section */}
@@ -87,7 +87,7 @@ export default function ItemsPage() {
               <div className={`w-12 h-12 bg-gradient-to-r ${category.color} rounded-lg flex items-center justify-center mr-4`}>
                 <span className="text-2xl">📦</span>
               </div>
-              <h2 className="text-2xl font-bold text-gray-900">{category.name}</h2>
+              <h2 className="text-2xl font-bold text-green-900">{category.name}</h2>
             </div>
             
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
@@ -96,7 +96,7 @@ export default function ItemsPage() {
                   <div className={`w-full h-20 bg-gradient-to-r ${category.color} rounded-lg mb-3 flex items-center justify-center`}>
                     <span className="text-3xl">🎮</span>
                   </div>
-                  <h4 className="text-sm font-semibold text-gray-900 text-center mb-1">
+                  <h4 className="text-sm font-semibold text-green-900 text-center mb-1">
                     {item}
                   </h4>
                   <p className="text-xs text-gray-500 text-center">

@@ -3,7 +3,7 @@ import Footer from '@/components/Footer';
 
 export default function LastPremiumPage() {
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-black">
+    <div className="min-h-screen bg-white dark:bg-black">
       <Header />
       <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <div className="text-center">

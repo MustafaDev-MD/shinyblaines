@@ -42,6 +42,60 @@ export interface Pokemon {
   };
 }
 
+export interface PokemonSpecies {
+  id: number;
+  name: string;
+  evolution_chain: {
+    url: string;
+  };
+  pokedex_numbers: Array<{
+    pokedex_number: number;
+    pokedex: {
+      name: string;
+    };
+  }>;
+}
+
+export interface PokemonMove {
+  move: {
+    name: string;
+    url: string;
+  };
+  version_group_details: Array<{
+    move_learn_method: {
+      name: string;
+    };
+    level_learned_at: number;
+    version_group: {
+      name: string;
+    };
+  }>;
+}
+
+export interface PokemonFullData {
+  id: number;
+  name: string;
+  abilities: Array<{
+    ability: {
+      name: string;
+      url: string;
+    };
+    is_hidden: boolean;
+    slot: number;
+  }>;
+  moves: Array<PokemonMove>;
+  types: Array<{
+    type: {
+      name: string;
+    };
+  }>;
+  sprites: Pokemon['sprites'];
+  height: number;
+  weight: number;
+  stats: Pokemon['stats'];
+  species: Pokemon['species'];
+}
+
 export interface PokemonListResponse {
   count: number;
   next: string | null;
@@ -142,4 +196,57 @@ export function getPokemonTypeColor(type: string): string {
   };
   
   return typeColors[type] || 'bg-gray-400';
+}
+
+const pokemonFullDataCache: Map<number, PokemonFullData> = new Map();
+
+export async function getPokemonFullData(nameOrId: string | number): Promise<PokemonFullData> {
+  const id = typeof nameOrId === 'number' ? nameOrId : parseInt(nameOrId);
+  
+  if (pokemonFullDataCache.has(id)) {
+    return pokemonFullDataCache.get(id)!;
+  }
+  
+  try {
+    const response = await axios.get(`${POKEAPI_BASE_URL}/pokemon/${nameOrId}`);
+    const data = response.data as PokemonFullData;
+    pokemonFullDataCache.set(id, data);
+    return data;
+  } catch (error) {
+    console.error('Error fetching Pokemon full data:', error);
+    throw error;
+  }
+}
+
+export function getPokemonAbilities(pokemon: PokemonFullData): string[] {
+  return pokemon.abilities.map(a => 
+    a.ability.name.charAt(0).toUpperCase() + a.ability.name.slice(1).replace(/-/g, ' ')
+  );
+}
+
+const GAME_VERSION_GROUPS: Record<string, string[]> = {
+  'scarlet-violet': ['scarlet-violet'],
+  'sword-shield': ['sword-shield'],
+  'bdsp': ['brilliant-diamond-shining-pearl'],
+  'legends-arceus': ['legends-arceus'],
+  'legends-za': ['scarlet-violet']
+};
+
+export function getPokemonMovesForGame(pokemon: PokemonFullData, game: string): string[] {
+  const validVersionGroups = GAME_VERSION_GROUPS[game] || ['scarlet-violet'];
+  
+  const moves = new Set<string>();
+  
+  for (const moveData of pokemon.moves) {
+    for (const versionDetail of moveData.version_group_details) {
+      if (validVersionGroups.includes(versionDetail.version_group.name)) {
+        const moveName = moveData.move.name.charAt(0).toUpperCase() + 
+          moveData.move.name.slice(1).replace(/-/g, ' ');
+        moves.add(moveName);
+        break;
+      }
+    }
+  }
+  
+  return Array.from(moves).sort();
 }

@@ -4,11 +4,13 @@ import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useAuth } from '@/contexts/AuthContext';
 import ThemeToggle from './ThemeToggle';
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const { theme } = useTheme();
+  const { theme, mounted } = useTheme();
+  const { user, signIn, signOut } = useAuth();
 
   const navigation = [
     { name: 'Home', href: '/', icon: '🏠' },
@@ -18,7 +20,7 @@ export default function Header() {
   ];
 
   return (
-    <header className={`${theme === 'dark' ? 'bg-gradient-to-r from-cyan-500 to-teal-600' : 'bg-gradient-to-r from-blue-500 to-indigo-600'} shadow-lg transition-colors duration-300`}>
+    <header className="bg-gradient-to-r from-[#336967] to-[#2d5a54] shadow-lg transition-colors duration-300">
       <nav className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
           {/* Logo */}
@@ -56,41 +58,50 @@ export default function Header() {
             </div>
           </div>
 
-          {/* Search Bar - Desktop */}
-          <div className="hidden lg:flex items-center space-x-4">
+            <div className="hidden lg:flex items-center space-x-4">
             <ThemeToggle />
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="Search..."
-                className={`w-64 px-4 py-2 rounded-lg text-sm ${theme === 'dark' ? 'text-gray-900 bg-white/90 placeholder-gray-500 focus:ring-white focus:bg-white' : 'text-gray-900 bg-gray-100 placeholder-gray-600 focus:ring-gray-400 focus:bg-white'} transition-all duration-200 focus:outline-none focus:ring-2`}
-              />
-              <svg
-                className="absolute right-3 top-2.5 h-4 w-4 text-gray-500"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+            {user ? (
+              <div className="flex items-center space-x-2">
+                <img 
+                  src={user.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.uid}`} 
+                  alt={user.displayName || 'User'} 
+                  className="w-8 h-8 rounded-full border-2 border-white"
                 />
-              </svg>
-            </div>
-            <button className="px-4 py-2 rounded-lg text-sm font-medium text-white border border-white/30 hover:bg-white/20 transition-all duration-200">
-              Sign In
-            </button>
+                <button 
+                  onClick={signOut}
+                  className="px-4 py-2 rounded-lg text-sm font-medium text-white border border-white/30 hover:bg-white/20 transition-all duration-200"
+                >
+                  Sign Out
+                </button>
+              </div>
+            ) : (
+              <button 
+                onClick={signIn}
+                className="px-4 py-2 rounded-lg text-sm font-medium text-white border border-white/30 hover:bg-white/20 transition-all duration-200"
+              >
+                Sign In
+              </button>
+            )}
           </div>
 
           {/* Tablet - Minimal Search */}
           <div className="hidden md:flex lg:hidden items-center space-x-3">
             <ThemeToggle />
-            <button className="px-3 py-2 rounded-lg text-sm font-medium text-white border border-white/30 hover:bg-white/20 transition-all duration-200">
-              Sign In
-            </button>
+            {user ? (
+              <button 
+                onClick={signOut}
+                className="px-3 py-2 rounded-lg text-sm font-medium text-white border border-white/30 hover:bg-white/20 transition-all duration-200"
+              >
+                Sign Out
+              </button>
+            ) : (
+              <button 
+                onClick={signIn}
+                className="px-3 py-2 rounded-lg text-sm font-medium text-white border border-white/30 hover:bg-white/20 transition-all duration-200"
+              >
+                Sign In
+              </button>
+            )}
           </div>
 
           {/* Mobile menu button */}
@@ -159,10 +170,10 @@ export default function Header() {
                     <input
                       type="text"
                       placeholder="Search..."
-                      className="w-full px-4 py-3 rounded-lg text-base text-gray-900 bg-white/90 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-white focus:bg-white transition-all duration-200"
+                      className="w-full px-4 py-3 rounded-lg text-base text-green-900 bg-white/90 placeholder-green-700 focus:outline-none focus:ring-2 focus:ring-white focus:bg-white transition-all duration-200"
                     />
                     <svg
-                      className="absolute right-6 top-4 h-4 w-4 text-gray-500"
+                      className="absolute right-6 top-4 h-4 w-4 text-green-700"
                       xmlns="http://www.w3.org/2000/svg"
                       fill="none"
                       viewBox="0 0 24 24"
@@ -176,7 +187,10 @@ export default function Header() {
                       />
                     </svg>
                   </div>
-                  <button className="w-full flex items-center justify-center px-4 py-3 rounded-lg text-base font-medium text-white border border-white/30 hover:bg-white/20 transition-all duration-200">
+                  <button 
+                    onClick={signIn}
+                    className="w-full flex items-center justify-center px-4 py-3 rounded-lg text-base font-medium text-white border border-white/30 hover:bg-white/20 transition-all duration-200"
+                  >
                     Sign In
                   </button>
                 </div>

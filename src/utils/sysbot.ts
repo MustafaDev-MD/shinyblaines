@@ -138,15 +138,6 @@ class SysbotValidationService {
       warnings.push('Consider using full EV spread for competitive play');
     }
 
-    // Random chance of validation failure for demo purposes
-    if (Math.random() < 0.05) {
-      return {
-        isValid: false,
-        errors: ['Pokemon configuration rejected - Invalid combination detected'],
-        warnings
-      };
-    }
-
     return {
       isValid: true,
       errors: [],

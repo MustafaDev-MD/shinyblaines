@@ -7,6 +7,7 @@ import PokemonCard from '@/components/PokemonCard';
 
 import Link from 'next/link';
 import { getPopularPokemon, getPokemonDetails, Pokemon } from '@/utils/pokemon';
+import { usePokedex } from '@/contexts/PokedexContext';
 
 export default function Home() {
   const [popularPokemon, setPopularPokemon] = useState<Pokemon[]>([]);
@@ -20,6 +21,7 @@ export default function Home() {
   const [showShinyOnly, setShowShinyOnly] = useState(false);
   const [showOwnedOnly, setShowOwnedOnly] = useState(false);
   const [sortBy, setSortBy] = useState('id');
+  const { ownedPokemon } = usePokedex();
 
   // Generate all Pokemon IDs from 1 to 1025
   const allPokemonIds = Array.from({ length: 1025 }, (_, i) => i + 1);
@@ -81,10 +83,8 @@ export default function Home() {
       }
       
       if (showOwnedOnly) {
-        // For demo purposes, we'll show a subset of Pokemon as "owned"
-        // In a real app, this would come from user's collection
-        const ownedPokemonIds = [25, 6, 150, 1, 4, 7, 94, 143, 145, 146];
-        allIds = allIds.filter(id => ownedPokemonIds.includes(id));
+        const ownedIds = ownedPokemon.map(p => p.id);
+        allIds = allIds.filter(id => ownedIds.includes(id));
       }
 
       const idsToLoad = allIds.slice(startOffset, startOffset + 40);
@@ -212,28 +212,28 @@ export default function Home() {
   ];
 
 return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-[#f5f5f0] dark:from-gray-900 dark:to-gray-800 transition-colors duration-300">
+      <div className="min-h-screen bg-white dark:bg-black transition-colors duration-300">
         <Header />
 
 {/* Pokemon Showcase Section */}
-        <section className="bg-[#fafaf8] dark:bg-gray-800 transition-colors duration-300">
-         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <section className="bg-white dark:bg-black transition-colors duration-300">
+         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-[#d1fae5] dark:border-gray-700 transition-colors duration-300">
 {/* Controls Header */}
             <div className="py-3 sm:py-4">
-                <div className="flex flex-col sm:flex-row flex-wrap justify-center gap-3 sm:gap-4 items-start sm:items-center bg-[#fafaf8] dark:bg-gray-700 rounded-xl shadow-sm border border-[#e2e8e0] dark:border-gray-600 p-3 sm:p-4 transition-colors duration-300">
+                <div className="flex flex-col sm:flex-row flex-wrap justify-center gap-3 sm:gap-4 items-start sm:items-center bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-[#d1fae5] dark:border-gray-700 p-3 sm:p-4 transition-colors duration-300">
                  
                  {/* Dropdowns Row */}
                  <div className="flex flex-wrap gap-3 sm:gap-4 w-full sm:w-auto">
-                   {/* Game Dropdown */}
-                   <div className="relative flex-1 sm:flex-none min-w-[140px]">
-                      <select 
-                        value={selectedGame}
-                        onChange={(e) => {
-                          setSelectedGame(e.target.value);
-                          setOffset(0);
-                        }}
-                        className="w-full appearance-none bg-[#f5f5f0] border border-[#e2e8e0] text-gray-700 py-2 px-3 sm:px-4 pr-8 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent cursor-pointer hover:bg-[#e8e8e3] transition-colors text-sm"
-                      >
+                    {/* Game Dropdown */}
+                    <div className="relative flex-1 sm:flex-none min-w-[140px]">
+                       <select 
+                         value={selectedGame}
+                         onChange={(e) => {
+                           setSelectedGame(e.target.value);
+                           setOffset(0);
+                         }}
+                         className="w-full appearance-none bg-[#f5f5f0] dark:bg-gray-800 border border-[#e2e8e0] dark:border-gray-600 text-gray-700 dark:text-gray-200 py-2 px-3 sm:px-4 pr-8 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent cursor-pointer hover:bg-[#e8e8e3] dark:hover:bg-gray-700 transition-colors text-sm"
+                       >
                        <option value="all">All Games</option>
                        <option value="legends-za">Legends Z-A</option>
                        <option value="scarlet-violet">Scarlet & Violet</option>
@@ -249,16 +249,16 @@ return (
                      </div>
                    </div>
 
-                   {/* Sort Dropdown */}
-                   <div className="relative flex-1 sm:flex-none min-w-[120px]">
-                      <select 
-                        value={sortBy}
-                        onChange={(e) => {
-                          setSortBy(e.target.value);
-                          setOffset(0);
-                        }}
-                        className="w-full appearance-none bg-[#f5f5f0] border border-[#e2e8e0] text-gray-700 py-2 px-3 sm:px-4 pr-8 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent cursor-pointer hover:bg-[#e8e8e3] transition-colors text-sm"
-                      >
+                    {/* Sort Dropdown */}
+                    <div className="relative flex-1 sm:flex-none min-w-[120px]">
+                       <select 
+                         value={sortBy}
+                         onChange={(e) => {
+                           setSortBy(e.target.value);
+                           setOffset(0);
+                         }}
+                         className="w-full appearance-none bg-[#f5f5f0] dark:bg-gray-800 border border-[#e2e8e0] dark:border-gray-600 text-gray-700 dark:text-gray-200 py-2 px-3 sm:px-4 pr-8 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent cursor-pointer hover:bg-[#e8e8e3] dark:hover:bg-gray-700 transition-colors text-sm"
+                       >
                        <option value="id">Sort by ID</option>
                        <option value="name">Sort by Name</option>
                        <option value="stats">Sort by Stats</option>
@@ -318,9 +318,9 @@ return (
                          }`}
                        />
                      </button>
-                     <span className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center">
-                       ✨ Shiny
-                     </span>
+                      <span className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center">
+                        <img src="/masklicon.png" alt="Shiny" className="w-5 h-5 sm:w-6 sm:h-6 mr-1" /> Shiny
+                      </span>
                    </div>
 
                    {/* Owned Toggle */}
@@ -376,7 +376,7 @@ return (
             ) : error ? (
              <div className="text-center py-16">
                <div className="text-8xl mb-6">⚠️</div>
-               <h3 className="text-2xl font-bold text-gray-900 mb-3">Unable to load Pokémon</h3>
+               <h3 className="text-2xl font-bold text-green-900 mb-3">Unable to load Pokémon</h3>
                <p className="text-gray-600 mb-6">{error}</p>
                 <button 
                   onClick={() => window.location.reload()}
@@ -388,20 +388,20 @@ return (
            ) : popularPokemon.length === 0 ? (
              <div className="text-center py-16">
                <div className="text-8xl mb-6">🔄</div>
-               <h3 className="text-2xl font-bold text-gray-900 mb-3">Loading Pokémon...</h3>
+               <h3 className="text-2xl font-bold text-green-900 mb-3">Loading Pokémon...</h3>
                <p className="text-gray-600">Fetching data from PokéAPI</p>
              </div>
            ) : (
              <>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-3 sm:gap-4 mb-8 sm:mb-12">
-                     {popularPokemon.map((pokemon) => (
+<div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-3 sm:gap-4 mb-8 sm:mb-12">
+                      {[...new Map(popularPokemon.map(p => [p.id, p])).values()].map((pokemon) => (
                         <PokemonCard 
                           key={pokemon.id} 
                           pokemon={pokemon} 
                           showShiny={showShinyOnly}
                         />
-                     ))}
-                   </div>
+                      ))}
+                    </div>
                
 {/* Load More Indicator */}
                 <div className="text-center mt-8">

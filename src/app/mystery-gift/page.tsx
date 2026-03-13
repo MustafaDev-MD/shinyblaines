@@ -48,7 +48,7 @@ export default function MysteryGiftPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-white dark:bg-black">
       <Header />
       
       {/* Hero Section */}
@@ -74,7 +74,7 @@ export default function MysteryGiftPage() {
       <main className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
         {/* Active Events */}
         <div className="mb-12">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Active Mystery Gifts</h2>
+          <h2 className="text-2xl font-bold text-green-900 mb-6">Active Mystery Gifts</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {mysteryGifts.map((gift, index) => (
               <div key={index} className={`pkm-card ${!gift.available ? 'opacity-50' : ''}`}>
@@ -93,7 +93,7 @@ export default function MysteryGiftPage() {
                     {gift.rarity}
                   </span>
                 </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">
+                <h3 className="text-xl font-bold text-green-900 mb-2">
                   {gift.title}
                 </h3>
                 <p className="text-gray-600 mb-6">
@@ -116,27 +116,27 @@ export default function MysteryGiftPage() {
 
         {/* Info Section */}
         <div className="bg-white rounded-xl shadow-lg p-8 mb-12">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">How Mystery Gifts Work</h2>
+          <h2 className="text-2xl font-bold text-green-900 mb-6">How Mystery Gifts Work</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="text-center">
               <div className="w-16 h-16 bg-cyan-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <span className="text-2xl">1️⃣</span>
               </div>
-              <h3 className="font-semibold text-gray-900 mb-2">Select Gift</h3>
+              <h3 className="font-semibold text-green-900 mb-2">Select Gift</h3>
               <p className="text-gray-600">Choose from available mystery gifts based on rarity and type</p>
             </div>
             <div className="text-center">
               <div className="w-16 h-16 bg-cyan-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <span className="text-2xl">2️⃣</span>
               </div>
-              <h3 className="font-semibold text-gray-900 mb-2">Connect & Trade</h3>
+              <h3 className="font-semibold text-green-900 mb-2">Connect & Trade</h3>
               <p className="text-gray-600">Connect to our automated trade bots for instant delivery</p>
             </div>
             <div className="text-center">
               <div className="w-16 h-16 bg-cyan-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <span className="text-2xl">3️⃣</span>
               </div>
-              <h3 className="font-semibold text-gray-900 mb-2">Receive Items</h3>
+              <h3 className="font-semibold text-green-900 mb-2">Receive Items</h3>
               <p className="text-gray-600">Get your mystery gift instantly in your game</p>
             </div>
           </div>
