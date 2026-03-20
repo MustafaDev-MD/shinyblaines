@@ -1,27 +1,45 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { validatePokemon, PokemonFormData } from '@/lib/legality';
-import { generateDiscordCommand } from '@/lib/discord';
+import { generateDiscordCommand, } from '@/lib/discord';
+import { sendTradeRequest, validateDiscordConnection } from '@/lib/discord-api';
+import { randomInt } from 'crypto';
+
+// function generateLinkCode(): string {
+//   const numbers = Array.from({ length: 8 }, () => Math.floor(Math.random() * 10)).join('');
+//   return `${numbers.slice(0, 4)}-${numbers.slice(4)}`; 
+// }
 
 function generateLinkCode(): string {
-  return Math.random().toString(36).substring(2, 8).toUpperCase();
+  const numbers = Array.from({ length: 8 }, () => randomInt(0, 10)).join('');
+  return `${numbers.slice(0, 4)}-${numbers.slice(4)}`;
 }
 
+// function generateQueueNumber(): number {
+//   return Math.floor(Math.random() * 20) + 1; 
+// }
+let currentQueue = 0;
+
 function generateQueueNumber(): number {
-  return Math.floor(Math.random() * 10) + 1;
+  currentQueue++;
+  return currentQueue;
 }
 
 export async function POST(request: NextRequest) {
+  console.log('[DEBUG STEP 1] API /trade called at:', new Date().toISOString());
   try {
     const body = await request.json();
-    const { pokemon, userId, userName } = body;
+    console.log('[DEBUG STEP 2] Request body:', JSON.stringify(body, null, 2));
+    const { pokemon, userId, userName, customLinkCode } = body;
 
-    if (!pokemon || !pokemon.game) {
+    // Basic request validation
+    if (!pokemon || !pokemon.game || !pokemon.pokemonId) {
       return NextResponse.json(
-        { success: false, error: 'Invalid request: Pokemon data and game are required' },
+        { success: false, error: 'Pokémon data aur game zaroori hai' },
         { status: 400 }
       );
     }
 
+    // Prepare form data for legality check
     const formData: PokemonFormData = {
       id: pokemon.pokemonId,
       name: pokemon.pokemonName,
@@ -30,14 +48,15 @@ export async function POST(request: NextRequest) {
       shiny: pokemon.shiny,
       alpha: pokemon.alpha,
       moves: pokemon.moves || [],
-      ability: pokemon.ability,
+      ability: pokemon.ability || '',
       nature: pokemon.nature,
       ivs: pokemon.ivs || {},
       evs: pokemon.evs || {},
-      item: pokemon.item || '',
+      item: pokemon.item || 'None',
       game: pokemon.game,
     };
 
+    // Run legality validation
     const validation = validatePokemon(formData);
     if (!validation.isValid) {
       return NextResponse.json(
@@ -46,54 +65,82 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const linkCode = generateLinkCode();
+    // Link Code handling (custom ya random)
+    let linkCode = customLinkCode && typeof customLinkCode === 'string' && /^\d{4}-\d{4}$/.test(customLinkCode.trim())
+      ? customLinkCode.trim()
+      : generateLinkCode();
+
     const queuePosition = generateQueueNumber();
 
+    // console.log('[DEBUG STEP 3] Before Discord try block - channelId:', channelId); 
+
+    // Try to send to Discord
+    let discordSuccess = false;
+    let discordMessageId: string | undefined;
+
     try {
-      const { sendTradeRequest, validateDiscordConnection } = await import('@/lib/discord-api');
-      
-      console.log('Checking Discord connection...');
-      const isConnected = await validateDiscordConnection();
-      console.log('Discord connected:', isConnected);
-      
-      if (isConnected) {
-        console.log('Sending trade request to Discord for game:', pokemon.game);
-        const result = await sendTradeRequest(pokemon, userId, userName);
-        console.log('Discord result:', result);
-        
-        if (result.success) {
-          return NextResponse.json({
-            success: true,
-            tradeId: result.tradeId,
-            linkCode: linkCode,
-            queuePosition: queuePosition,
-            message: 'Trade request sent to Discord! Use link code in game.',
-            discordConnected: true,
-            warnings: validation.warnings
-          });
-        }
-      }
-    } catch (discordError) {
-      console.log('Discord error:', discordError);
+      console.log('[DEBUG STEP 4] Importing discord-api...');
+      // const { sendTradeRequest, validateDiscordConnection } = await import('@/lib/discord-api');
+
+      console.log('[DEBUG STEP 5] Import successful');
+
+      console.log('[DEBUG STEP 6] Checking connection...');
+      // const isConnected = await validateDiscordConnection();
+      // console.log('[DEBUG STEP 7] Connection result:', isConnected);
+      // if (isConnected) {
+      //   console.log('[DEBUG STEP 8] Sending trade request...');
+      //   const result = await sendTradeRequest(pokemon, userId, userName);
+      //   console.log('[DEBUG STEP 9] Send result:', result);
+      //   if (result.success) {
+      //     discordSuccess = true;
+      //     discordMessageId = result.messageId;
+      //   } else {
+      //     console.error("Discord send failed:", result.error);
+      //   }
+      // }
+
+      // const result = await sendTradeRequest(pokemon, userId, userName);
+      const result = await sendTradeRequest(pokemon);
+if (result.success) {
+  discordSuccess = true;
+  discordMessageId = result.messageId;
+}
+    } catch (discordError: any) {
+      console.error('[Trade API] Discord failed:', discordError?.message || discordError);
+      console.error('[DEBUG STEP 10] Discord block failed:', discordError?.message || discordError);
+      console.error('[DEBUG STEP 10 Full error]', discordError);
+      // Silent fail — user ko fallback denge
     }
 
-    const command = generateDiscordCommand(pokemon);
+    // Final response
+    const response = {
+      // success: true,
+      success: discordSuccess,
+      linkCode,
+      queuePosition,
+      discordConnected: discordSuccess,
+      discordMessageId,
+      warnings: validation.warnings || [],
+      message: discordSuccess
+        ? 'Trade request Discord pe post ho gaya! Channel check karo aur game mein code daalo.'
+        : 'Trade ready hai! Discord connect nahi hua, lekin yeh code game mein use kar sakte ho.',
+    };
 
-    return NextResponse.json({
-      success: true,
-      linkCode: linkCode,
-      queuePosition: queuePosition,
-      message: 'Trade ready! Use link code in your game.',
-      discordConnected: false,
-      fallbackCommand: command,
-      warnings: validation.warnings
+    // Agar Discord fail hua to fallback command bhej do
+    if (!discordSuccess) {
+      (response as any).fallbackCommand = generateDiscordCommand(pokemon);
+    }
+
+    return NextResponse.json(response);
+
+  } catch (error: any) {
+    // console.error('[Trade API] Critical error:', error?.message || error);
+    console.error('[Trade API] Critical error:', {
+      message: error?.message,
+      stack: error?.stack,
     });
-
-  } catch (error: unknown) {
-    console.error('Trade API Error:', error);
-    const err = error as Error;
     return NextResponse.json(
-      { success: false, error: err.message || 'Internal server error' },
+      { success: false, error: 'Server error — please try again later' },
       { status: 500 }
     );
   }
@@ -101,8 +148,8 @@ export async function POST(request: NextRequest) {
 
 export async function GET() {
   return NextResponse.json({
-    status: 'ok',
+    status: 'running',
     timestamp: new Date().toISOString(),
-    message: 'Trade API is running'
+    message: 'Trade API live hai!'
   });
 }

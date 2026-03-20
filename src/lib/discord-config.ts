@@ -7,6 +7,7 @@ export const DISCORD_CONFIG = {
     'sword-shield': process.env.DISCORD_CHANNEL_SWORD_SHIELD,
     'bdsp': process.env.DISCORD_CHANNEL_BDSP,
     'legends-arceus': process.env.DISCORD_CHANNEL_LEGENDS_ARCEUS,
+    // 'trade-request': process.env.DISCORD_CHANNEL_ID,
   } as Record<string, string>,
   API_BASE_URL: 'https://discord.com/api/v10',
 };

@@ -1,7 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Pokemon, formatPokemonName, getPokemonFullData, getPokemonAbilities, getPokemonMovesForGame } from '@/utils/pokemon';
+import {
+  Pokemon,
+  formatPokemonName,
+  getPokemonFullData,
+  getPokemonAbilities,
+  getPokemonMovesForGame,
+} from '@/utils/pokemon';
 import { validatePokemon, PokemonFormData } from '@/lib/legality';
 import { usePokedex } from '@/contexts/PokedexContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -17,674 +23,823 @@ const NATURES = [
   'Bold', 'Docile', 'Relaxed', 'Impish', 'Lax',
   'Timid', 'Hasty', 'Serious', 'Jolly', 'Naive',
   'Modest', 'Mild', 'Quiet', 'Bashful', 'Rash',
-  'Calm', 'Gentle', 'Sassy', 'Careful', 'Quirky'
+  'Calm', 'Gentle', 'Sassy', 'Careful', 'Quirky',
 ];
 
-const ITEMS = [
-  'None', 'Life Orb', 'Choice Specs', 'Choice Scarf', 'Leftovers',
-  'Focus Sash', 'Assault Vest', 'Expert Belt', 'Weakness Policy',
-  'Master Ball', 'Ultra Ball', 'Great Ball', 'Poke Ball'
+const COMMON_ITEMS = [
+  'None', 'Leftovers', 'Life Orb', 'Choice Specs', 'Choice Scarf',
+  'Choice Band', 'Assault Vest', 'Focus Sash', 'Focus Band', 'Expert Belt',
+  'Weakness Policy', 'Eviolite', 'Rocky Helmet', 'Air Balloon',
+];
+
+const COMMON_BALLS = [
+  'Poke Ball', 'Great Ball', 'Ultra Ball', 'Master Ball',
+  'Quick Ball', 'Dusk Ball', 'Heal Ball', 'Luxury Ball', 'Premier Ball',
+  'Timer Ball', 'Repeat Ball', 'Nest Ball', 'Net Ball', 'Dive Ball',
+  'Dream Ball', 'Beast Ball', 'Friend Ball', 'Level Ball', 'Moon Ball',
+  'Love Ball', 'Fast Ball', 'Heavy Ball', 'Lure Ball',
+];
+
+const TERA_TYPES = [
+  'Normal', 'Fire', 'Water', 'Grass', 'Electric', 'Ice', 'Fighting',
+  'Poison', 'Ground', 'Flying', 'Psychic', 'Bug', 'Rock', 'Ghost',
+  'Dragon', 'Dark', 'Steel', 'Fairy', 'Stellar',
 ];
 
 export default function BottomSheet({ isOpen, onClose, pokemon }: BottomSheetProps) {
   const [customData, setCustomData] = useState({
     nickname: '',
-    nature: 'modest',
+    ot: 'Trainer',
+    tid: '12345',
+    sid: '54321',
+    nature: 'Modest',
     level: 100,
-    item: '',
+    item: 'None',
     ability: '',
-    tid: '',
-    sid: '',
-    language: 'english',
-    metLocation: '',
-    metDate: '',
-    size: '',
-    ivs: { hp: 31, attack: 31, defense: 31, 'special-attack': 31, 'special-defense': 31, speed: 31 },
-    evs: { hp: 0, attack: 0, defense: 0, 'special-attack': 0, 'special-defense': 0, speed: 0 },
+    ball: 'Poke Ball',
+    teraType: 'Normal',
+    ivs: { hp: 31, atk: 31, def: 31, spa: 31, spd: 31, spe: 31 },
+    evs: { hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 },
     moves: ['', '', '', ''],
     shiny: false,
     alpha: false,
-    maleTrainer: true,
-    malePokemon: true
   });
 
   const [selectedGame, setSelectedGame] = useState('scarlet-violet');
   const [showModal, setShowModal] = useState(false);
   const [showValidateModal, setShowValidateModal] = useState(false);
-  const [modalContent, setModalContent] = useState<{ title: string; message: string; command: string; queuePosition?: number; warnings?: string[]; isValid?: boolean; errors?: string[] } | null>(null);
+  const [modalContent, setModalContent] = useState<any>(null);
+
   const [isLoading, setIsLoading] = useState(false);
   const [availableAbilities, setAvailableAbilities] = useState<string[]>([]);
   const [availableMoves, setAvailableMoves] = useState<string[]>([]);
-  const [isLoadingMoves, setIsLoadingMoves] = useState(false);
-  
+  const [isLoadingData, setIsLoadingData] = useState(false);
+
   const { addOwnedPokemon, isOwned, addTradeToHistory } = usePokedex();
   const { user } = useAuth();
-  const isPokemonOwned = isOwned(pokemon.id);
+
+  const pokemonOwned = isOwned?.(pokemon.id) ?? false;
 
   useEffect(() => {
-    setCustomData(prev => ({
+    if (!pokemon?.abilities?.length) return;
+    setCustomData((prev) => ({
       ...prev,
-      ability: pokemon.abilities?.[0]?.ability?.name || ''
+      ability: pokemon.abilities[0]?.ability?.name || '',
     }));
   }, [pokemon]);
 
   useEffect(() => {
-    const fetchAbilitiesAndMoves = async () => {
+    if (!isOpen) return;
+
+    let active = true;
+    setIsLoadingData(true);
+
+    (async () => {
       try {
-        const fullData = await getPokemonFullData(pokemon.id);
-        const abilities = getPokemonAbilities(fullData);
-        setAvailableAbilities(abilities);
-        
-        setIsLoadingMoves(true);
-        const moves = getPokemonMovesForGame(fullData, selectedGame);
-        setAvailableMoves(moves);
-        setIsLoadingMoves(false);
-      } catch (error) {
-        console.error('Error fetching Pokemon data:', error);
+        const data = await getPokemonFullData(pokemon.id);
+        if (!active) return;
+
+        setAvailableAbilities(getPokemonAbilities(data) || []);
+
+        const moves = await getPokemonMovesForGame(data, selectedGame);
+        setAvailableMoves(moves || []);
+      } catch (err) {
+        console.error('Failed to load Pokémon data', err);
         setAvailableAbilities([]);
         setAvailableMoves([]);
-        setIsLoadingMoves(false);
+      } finally {
+        if (active) setIsLoadingData(false);
       }
-    };
-    
-    fetchAbilitiesAndMoves();
-  }, [pokemon.id, selectedGame]);
+    })();
 
-  const validatePokemonForm = () => {
-    const formData: PokemonFormData = {
+    return () => {
+      active = false;
+    };
+  }, [pokemon.id, selectedGame, isOpen]);
+
+  const evTotal = Object.values(customData.evs).reduce((a, b) => a + b, 0);
+
+  // ────────────────────────────────────────────────
+  //                  Client-side checks
+  // ────────────────────────────────────────────────
+  const getClientErrors = (): string[] => {
+    const errs: string[] = [];
+
+    if (!Number.isInteger(customData.level) || customData.level < 1 || customData.level > 100) {
+      errs.push('Level must be 1–100');
+    }
+
+    (Object.keys(customData.ivs) as (keyof typeof customData.ivs)[]).forEach((k) => {
+      const v = customData.ivs[k];
+      if (!Number.isInteger(v) || v < 0 || v > 31) errs.push(`${k.toUpperCase()} IV: 0–31`);
+    });
+
+    if (evTotal > 510) errs.push(`EVs total > 510 (${evTotal})`);
+
+    customData.moves.forEach((m, i) => {
+      if (m && !availableMoves.includes(m)) {
+        errs.push(`Move ${i + 1} not available`);
+      }
+    });
+
+    if (customData.ability && !availableAbilities.includes(customData.ability)) {
+      errs.push('Invalid ability');
+    }
+
+    if (!/^\d{1,5}$/.test(customData.tid) || !/^\d{1,5}$/.test(customData.sid)) {
+      errs.push('TID & SID should be 1–5 digits');
+    }
+
+    return errs;
+  };
+
+  const handleValidate = async () => {
+    const clientErrs = getClientErrors();
+    if (clientErrs.length > 0) {
+      setModalContent({
+        title: 'Invalid settings',
+        message: clientErrs.join('\n'),
+        isValid: false,
+        errors: clientErrs,
+      });
+      setShowValidateModal(true);
+      return false;
+    }
+
+    const form: PokemonFormData = {
       id: pokemon.id,
       name: pokemon.name,
       species: pokemon.name,
       level: customData.level,
       shiny: customData.shiny,
       alpha: customData.alpha,
-      moves: customData.moves.filter(m => m !== ''),
+      moves: customData.moves.filter(Boolean),
       ability: customData.ability,
       nature: customData.nature,
       ivs: customData.ivs,
       evs: customData.evs,
       item: customData.item,
-      game: selectedGame
+      game: selectedGame,
     };
 
-    const result = validatePokemon(formData);
-    
-    if (!result.isValid) {
-      setModalContent({
-        title: 'Validation Failed',
-        message: result.errors.join('\n'),
-        command: '',
-        isValid: false,
-        errors: result.errors
-      });
-      setShowValidateModal(true);
-      return false;
-    }
+    const result = await Promise.resolve(validatePokemon(form));
 
     setModalContent({
-      title: result.warnings.length > 0 ? 'Pokemon Valid (with warnings)' : 'Pokemon Valid!',
-      message: result.warnings.length > 0 ? result.warnings.join('\n') : `${formatPokemonName(pokemon.name)} is legal and ready to trade!`,
-      command: '',
-      isValid: true,
-      warnings: result.warnings
+      title: result.isValid ? (result.warnings?.length ? 'Valid (with warnings)' : 'Valid!') : 'Validation failed',
+      message: result.isValid
+        ? (result.warnings?.length ? result.warnings.join('\n') : 'Legal Pokémon ✓')
+        : result.errors?.join('\n') || 'Unknown error',
+      isValid: result.isValid,
+      errors: result.errors,
+      warnings: result.warnings,
     });
+
     setShowValidateModal(true);
-    return true;
+    return result.isValid;
   };
 
-  const handleTradeOnSite = async () => {
-    setIsLoading(true);
-    try {
-      const response = await fetch('/api/trade', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          pokemon: {
-            pokemonName: formatPokemonName(pokemon.name),
-            pokemonId: pokemon.id,
-            shiny: customData.shiny,
-            alpha: customData.alpha,
-            level: customData.level,
-            nature: customData.nature,
-            ability: customData.ability,
-            moves: customData.moves.filter(m => m !== ''),
-            ivs: customData.ivs,
-            evs: customData.evs,
-            item: customData.item,
-            game: selectedGame,
+  // BottomSheet.tsx ke handleTrade function ke andar:
+// const handleTrade = async () => {
+//   const valid = await handleValidate();
+//   if (!valid) return;
+
+//   setIsLoading(true);
+
+//   try {
+//     const resp = await fetch('/api/trade', {
+//       method: 'POST',
+//       headers: { 'Content-Type': 'application/json' },
+//       body: JSON.stringify({
+//         pokemon: {
+//           pokemonName: formatPokemonName(pokemon.name),
+//           pokemonId: pokemon.id,
+//           shiny: customData.shiny,
+//           alpha: customData.alpha,
+//           level: customData.level,
+//           nature: customData.nature,
+//           ability: customData.ability,
+//           // Moves array ko saf-suthra karke bhejein
+//           moves: customData.moves.filter(m => m && m.trim() !== ''),
+//           ivs: customData.ivs,
+//           // EVs ki keys ko STAT_MAP se match hona chahiye
+//           evs: {
+//             hp: customData.evs.hp,
+//             attack: customData.evs.atk,      // 'atk' ko 'attack' kiya
+//             defense: customData.evs.def,     // 'def' ko 'defense' kiya
+//             'special-attack': customData.evs.spa, // 'spa' ko full name diya
+//             'special-defense': customData.evs.spd,
+//             speed: customData.evs.spe
+//           },
+//           item: customData.item,
+//           ball: customData.ball,
+//           teraType: customData.teraType,
+//           game: selectedGame,
+//           ot: customData.ot,
+//           tid: customData.tid,
+//           sid: customData.sid,
+//         },
+//         userId: user?.uid,
+//         userName: user?.displayName || 'Anonymous',
+//       }),
+//     });
+//     // ... baqi code same rahega
+
+//       const data = await resp.json();
+
+//       if (data.success || data.fallback) {
+//         const code = data.linkCode || Math.random().toString(36).slice(2, 8).toUpperCase();
+//         const pos = data.queuePosition || Math.floor(Math.random() * 20) + 1;
+
+//         addTradeToHistory?.({
+//           userId: user?.uid!,
+//           pokemonId: pokemon.id,
+//           pokemonName: pokemon.name,
+//           linkCode: code,
+//           status: 'pending',
+//           game: selectedGame,
+//         });
+
+//         setModalContent({
+//           title: 'Trade Started!',
+//           message: '',
+//           command: code,
+//           queuePosition: pos,
+//           warnings: data.warnings,
+//         });
+//         setShowModal(true);
+//       } else {
+//         alert(data.error || 'Trade request failed');
+//       }
+//     } catch (err) {
+//       alert('Connection error – please try again');
+//     } finally {
+//       setIsLoading(false);
+//     }
+//   };
+
+// BottomSheet.tsx ke handleTrade function ke andar ye object replace karein:
+
+const handleTrade = async () => {
+  const valid = await handleValidate();
+  if (!valid) return;
+
+  setIsLoading(true);
+
+  try {
+    const resp = await fetch('/api/trade', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        pokemon: {
+          pokemonName: formatPokemonName(pokemon.name),
+          pokemonId: pokemon.id,
+          shiny: customData.shiny,
+          alpha: customData.alpha,
+          level: customData.level,
+          nature: customData.nature,
+          ability: customData.ability,
+          moves: customData.moves.filter(m => m && m.trim() !== ''),
+          ivs: customData.ivs,
+          // Yahan keys wahi rakhein jo discord.ts accept karta hai
+          evs: {
+            hp: customData.evs.hp,
+            atk: customData.evs.atk,
+            def: customData.evs.def,
+            spa: customData.evs.spa,
+            spd: customData.evs.spd,
+            spe: customData.evs.spe
           },
-          userId: user?.uid,
-          userName: user?.displayName || 'Anonymous'
-        }),
+          item: customData.item,
+          ball: customData.ball,
+          teraType: customData.teraType,
+          game: selectedGame,
+          ot: customData.ot,
+          tid: customData.tid,
+          sid: customData.sid,
+        },
+        userId: user?.uid,
+        userName: user?.displayName || 'Anonymous',
+      }),
+    });
+
+    const data = await resp.json();
+
+    console.log("API Response:", data);
+
+    if (data.success) {
+      // Trade successfully queued in Discord
+      setModalContent({
+        title: 'Trade Started!',
+        message: `Your trade is in queue. Link Code will be sent to Discord.`,
+        linkCode: data.linkCode,
+        queuePosition: data.queuePosition,
+        isValid: true
       });
-      
-      const data = await response.json();
-      
-      if (data.success || data.fallback) {
-        const linkCode = data.linkCode || Math.random().toString(36).substring(2, 8).toUpperCase();
-        const queuePosition = data.queuePosition || Math.floor(Math.random() * 10) + 1;
-        
-        if (user) {
-          addTradeToHistory({
-            userId: user.uid,
-            pokemonId: pokemon.id,
-            pokemonName: pokemon.name,
-            linkCode: linkCode,
-            status: 'pending',
-            game: selectedGame
-          });
-        }
-        
-        setModalContent({
-          title: 'Trade Initiated!',
-          message: '',
-          command: linkCode,
-          queuePosition: queuePosition,
-          warnings: data.warnings || []
-        });
-        setShowModal(true);
-      } else {
-        alert(data.error || 'Trade failed. Please try again.');
-      }
-    } catch (error) {
-      alert('Failed to submit trade. Please try again.');
-    } finally {
-      setIsLoading(false);
+      setShowModal(true);
+      addTradeToHistory?.({
+        userId: user?.uid!,
+        pokemonId: pokemon.id,
+        pokemonName: pokemon.name,
+        linkCode: data.linkCode,
+        status: 'pending',
+        game: selectedGame,
+      });
+    } else {
+      alert(data.error || 'Bot error: Could not start trade');
     }
-  };
+  } catch (err) {
+    console.error("Trade Error:", err);
+    alert('Connection error – check if API route is running');
+  } finally {
+    setIsLoading(false);
+  }
+};
 
-  const updateIV = (stat: string, value: number) => {
-    setCustomData(prev => ({
-      ...prev,
-      ivs: { ...prev.ivs, [stat]: Math.min(31, Math.max(0, value)) }
+  const updateIV = (stat: keyof typeof customData.ivs, value: string) => {
+    const num = Number(value);
+    setCustomData((p) => ({
+      ...p,
+      ivs: { ...p.ivs, [stat]: Number.isNaN(num) ? 31 : Math.min(31, Math.max(0, num)) },
     }));
   };
 
-  const updateEV = (stat: string, value: number) => {
-    setCustomData(prev => ({
-      ...prev,
-      evs: { ...prev.evs, [stat]: Math.min(252, Math.max(0, value)) }
+  const updateEV = (stat: keyof typeof customData.evs, value: string) => {
+    const num = Number(value);
+    setCustomData((p) => ({
+      ...p,
+      evs: { ...p.evs, [stat]: Number.isNaN(num) ? 0 : Math.min(252, Math.max(0, num)) },
     }));
   };
 
-  const getEVTotal = () => Object.values(customData.evs).reduce((sum, ev) => sum + ev, 0);
+  // Simple Showdown export (you can expand it later)
+  const showdownText = `${formatPokemonName(pokemon.name)}${customData.nickname ? ` (${customData.nickname})` : ''} @ ${customData.item}
+Ability: ${customData.ability || '—'}
+Level: ${customData.level}
+${customData.shiny ? 'Shiny: Yes\n' : ''}${customData.teraType ? `Tera Type: ${customData.teraType}\n` : ''}Ball: ${customData.ball}
+EVs: ${Object.entries(customData.evs)
+  .filter(([,v]) => v > 0)
+  .map(([k,v]) => `${v} ${k.toUpperCase()}`)
+  .join(' / ') || '—'}
+${customData.nature} Nature
+IVs: ${Object.values(customData.ivs).join('/')}${customData.moves.some(Boolean) ? '\n' : ''}
+${customData.moves.map(m => `- ${m || '(None)'}`).join('\n')}`;
+
+// Custom format export with empty field check
+const generateCommandText = () => {
+  const lines = [
+    `!t ${formatPokemonName(pokemon.name)}`,
+    customData.ability ? `Ability: ${customData.ability}` : '',
+    customData.ball ? `Ball: ${customData.ball}` : '',
+    `Language: English`, // Default as per your format
+    customData.ot ? `OT: ${customData.ot}` : '',
+    customData.tid ? `TID: ${customData.tid}` : '',
+    customData.sid ? `SID: ${customData.sid}` : '',
+    `Level: ${customData.level}`,
+    customData.teraType ? `Tera Type: ${customData.teraType}` : '',
+    `${customData.nature} Nature`,
+    // IVs line
+    `IVs: ${customData.ivs.hp} HP / ${customData.ivs.atk} atk / ${customData.ivs.def} def / ${customData.ivs.spa} spa / ${customData.ivs.spd} spd / ${customData.ivs.spe} spe`
+  ];
+
+  // Filter out empty strings so they don't appear in clipboard
+  return lines.filter(line => line !== '').join('\n');
+};
+
+const commandText = generateCommandText();
 
   if (!isOpen) return null;
 
   return (
-    <div className={`fixed inset-0 z-50 flex items-end bg-black/60 backdrop-blur-sm transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-      <div className={`bg-white dark:bg-gray-900 w-full max-h-[90vh] overflow-hidden rounded-t-3xl shadow-2xl transform transition-transform duration-300 ${isOpen ? 'translate-y-0' : 'translate-y-full'}`}>
-        
-        {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-cyan-600 px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="relative">
-              <img
-                src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${pokemon.id}.png`}
-                alt={pokemon.name}
-                className="w-12 h-12 sm:w-16 sm:h-16"
-              />
-              <div className="absolute -top-1 -right-1 flex gap-1">
+    <>
+      <div
+        className={`fixed inset-0 z-50 flex items-end bg-black/60 backdrop-blur-sm transition-opacity duration-300 ${
+          isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
+        }`}
+      >
+        <div
+          className={`bg-white dark:bg-gray-900 w-full max-h-[92vh] overflow-hidden rounded-t-3xl shadow-2xl transform transition-transform duration-300 ${
+            isOpen ? 'translate-y-0' : 'translate-y-full'
+          }`}
+        >
+          {/* Header */}
+          <div className="bg-gradient-to-r from-blue-600 to-cyan-600 px-4 py-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <img
+                  src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${pokemon.id}.png`}
+                  alt={pokemon.name}
+                  className="w-14 h-14 sm:w-16 sm:h-16 bg-white/90 rounded-full p-1"
+                />
                 {customData.shiny && (
-                  <div className="bg-white/80 backdrop-blur-sm rounded-full p-0.5 shadow-sm">
+                  <div className="absolute -top-1 -right-1 bg-white/80 rounded-full p-1 shadow">
                     <img src="/masklicon.png" alt="Shiny" className="w-5 h-5" />
                   </div>
                 )}
-                {customData.alpha && (
-                  <div className="bg-white/80 backdrop-blur-sm rounded-full p-0.5 shadow-sm">
-                    <img src="/masklicon.png" alt="Alpha" className="w-5 h-5" />
-                  </div>
-                )}
               </div>
-            </div>
-            <div>
-              <h3 className="text-white font-bold text-lg sm:text-xl">
-                {formatPokemonName(pokemon.name)}
-              </h3>
-              <div className="flex items-center space-x-2">
-                <span className="text-blue-200 text-sm">#{String(pokemon.id).padStart(3, '0')}</span>
-                <div className="flex space-x-1">
-                  {pokemon.types?.map((typeInfo: any, index: number) => (
+
+              <div>
+                <h3 className="text-white font-bold text-xl">
+                  {formatPokemonName(pokemon.name)}
+                </h3>
+                <div className="flex items-center gap-2 text-sm text-blue-100">
+                  <span>#{String(pokemon.id).padStart(4, '0')}</span>
+                  {pokemon.types?.map((t: any) => (
                     <span
-                      key={index}
-                      className={`px-2 py-0.5 text-xs font-bold rounded text-white ${
-                        typeInfo.type.name === 'fire' ? 'bg-red-500' :
-                        typeInfo.type.name === 'water' ? 'bg-blue-500' :
-                        typeInfo.type.name === 'grass' ? 'bg-green-500' :
-                        typeInfo.type.name === 'electric' ? 'bg-yellow-400' :
-                        typeInfo.type.name === 'psychic' ? 'bg-pink-500' :
-                        typeInfo.type.name === 'ghost' ? 'bg-purple-700' :
-                        typeInfo.type.name === 'dragon' ? 'bg-indigo-600' :
-                        'bg-gray-400'
-                      }`}
+                      key={t.type.name}
+                      className="px-2 py-0.5 text-xs rounded-full bg-white/20"
                     >
-                      {typeInfo.type.name.toUpperCase()}
+                      {t.type.name}
                     </span>
                   ))}
                 </div>
               </div>
             </div>
+
+            <button
+              onClick={onClose}
+              className="text-white hover:bg-white/20 p-2 rounded-full transition"
+            >
+              <svg className="w-7 h-7" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
+              </svg>
+            </button>
           </div>
-          <button onClick={onClose} className="text-white hover:bg-white/20 p-3 rounded-lg">
-            <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
-            </svg>
-          </button>
-        </div>
 
-        {/* Content */}
-        <div className="overflow-y-auto max-h-[75vh]">
-          <div className="flex flex-col sm:flex-row gap-4 p-5">
-            
-            {/* Column 1: Basic */}
-            <div className="w-full sm:w-64 space-y-4">
-              <h4 className="text-base font-semibold text-green-900 dark:text-white mb-3">Basic</h4>
-              
+          {/* Main content */}
+          <div className="p-5 overflow-y-auto max-h-[calc(92vh-80px)]">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+
+              {/* 1. Basic Info */}
               <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Nickname
-                  </label>
-                  <input
-                    type="text"
-                    value={customData.nickname}
-                    onChange={(e) => setCustomData(prev => ({ ...prev, nickname: e.target.value }))}
-                    className="w-full px-3 py-2 text-base border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-green-900 dark:text-white"
-                    placeholder={formatPokemonName(pokemon.name)}
-                  />
-                </div>
+                <h4 className="font-semibold text-lg border-b pb-1">Basic</h4>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Nature
-                  </label>
-                  <select
-                    value={customData.nature}
-                    onChange={(e) => setCustomData(prev => ({ ...prev, nature: e.target.value }))}
-                    className="w-full px-3 py-2 text-base border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-green-900 dark:text-white"
-                  >
-                    {NATURES.map(nature => (
-                      <option key={nature} value={nature.toLowerCase()}>{nature}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-3">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Level
-                    </label>
+                    <label className="block text-sm mb-1 font-medium">Nickname</label>
                     <input
-                      type="number"
-                      min="1"
-                      max="100"
-                      value={customData.level}
-                      onChange={(e) => setCustomData(prev => ({ ...prev, level: parseInt(e.target.value) || 1 }))}
-                      className="w-full px-3 py-2 text-base border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-green-900 dark:text-white"
+                      maxLength={12}
+                      value={customData.nickname}
+                      onChange={(e) => setCustomData((p) => ({ ...p, nickname: e.target.value }))}
+                      className="w-full border rounded-lg px-3 py-2 dark:bg-gray-800 dark:border-gray-700"
                     />
                   </div>
+
+                  <div className="grid grid-cols-3 gap-2">
+                    <div>
+                      <label className="block text-xs mb-1">OT</label>
+                      <input
+                        value={customData.ot}
+                        onChange={(e) => setCustomData((p) => ({ ...p, ot: e.target.value.slice(0,12) }))}
+                        className="w-full border rounded px-2 py-1.5 text-sm dark:bg-gray-800 dark:border-gray-700"
+                        maxLength={12}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs mb-1">TID</label>
+                      <input
+                        value={customData.tid}
+                        onChange={(e) => setCustomData((p) => ({ ...p, tid: e.target.value.replace(/\D/g,'').slice(0,5) }))}
+                        className="w-full border rounded px-2 py-1.5 text-sm dark:bg-gray-800 dark:border-gray-700"
+                        maxLength={5}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs mb-1">SID</label>
+                      <input
+                        value={customData.sid}
+                        onChange={(e) => setCustomData((p) => ({ ...p, sid: e.target.value.replace(/\D/g,'').slice(0,5) }))}
+                        className="w-full border rounded px-2 py-1.5 text-sm dark:bg-gray-800 dark:border-gray-700"
+                        maxLength={5}
+                      />
+                    </div>
+                  </div>
+
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Item
+                    <label className="block text-sm mb-1 font-medium">Nature</label>
+                    <select
+                      value={customData.nature}
+                      onChange={(e) => setCustomData((p) => ({ ...p, nature: e.target.value }))}
+                      className="w-full border rounded-lg px-3 py-2 dark:bg-gray-800 dark:border-gray-700"
+                    >
+                      {NATURES.map(n => <option key={n} value={n}>{n}</option>)}
+                    </select>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm mb-1 font-medium">Level</label>
+                      <input
+                        type="number"
+                        min={1}
+                        max={100}
+                        value={customData.level}
+                        onChange={(e) => {
+                          const v = Number(e.target.value);
+                          setCustomData((p) => ({ ...p, level: Number.isNaN(v) ? 50 : Math.min(100, Math.max(1, v)) }));
+                        }}
+                        className="w-full border rounded-lg px-3 py-2 text-center dark:bg-gray-800 dark:border-gray-700"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm mb-1 font-medium">Item</label>
+                      <select
+                        value={customData.item}
+                        onChange={(e) => setCustomData((p) => ({ ...p, item: e.target.value }))}
+                        className="w-full border rounded-lg px-3 py-2 dark:bg-gray-800 dark:border-gray-700"
+                      >
+                        {COMMON_ITEMS.map(i => <option key={i} value={i}>{i}</option>)}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm mb-1 font-medium flex items-center gap-2">
+                      Ability
+                      {isLoadingData && <span className="text-xs text-gray-500">(loading…)</span>}
                     </label>
                     <select
-                      value={customData.item}
-                      onChange={(e) => setCustomData(prev => ({ ...prev, item: e.target.value }))}
-                      className="w-full px-3 py-2 text-base border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-green-900 dark:text-white"
+                      value={customData.ability}
+                      onChange={(e) => setCustomData((p) => ({ ...p, ability: e.target.value }))}
+                      disabled={isLoadingData || availableAbilities.length === 0}
+                      className="w-full border rounded-lg px-3 py-2 dark:bg-gray-800 dark:border-gray-700 disabled:opacity-50"
                     >
-                      {ITEMS.map(item => (
-                        <option key={item} value={item.toLowerCase()}>{item}</option>
+                      <option value="">— Select —</option>
+                      {availableAbilities.map(a => (
+                        <option key={a} value={a}>{a}</option>
                       ))}
                     </select>
                   </div>
+
+                  <div className="flex flex-col gap-2 pt-1">
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={customData.shiny}
+                        onChange={e => setCustomData(p => ({ ...p, shiny: e.target.checked }))}
+                        className="rounded text-yellow-500"
+                      />
+                      <span>Shiny</span>
+                    </label>
+
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={customData.alpha}
+                        onChange={e => setCustomData(p => ({ ...p, alpha: e.target.checked }))}
+                        className="rounded text-purple-600"
+                      />
+                      <span>Alpha (Legends: Arceus)</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              {/* 2. Stats */}
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <h4 className="font-semibold text-lg border-b pb-1">Stats</h4>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">
+                    EVs {evTotal} / 510
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-3">
+                  {['hp','atk','def','spa','spd','spe'].map(stat => (
+                    <div key={stat} className="space-y-2">
+                      <div className="text-center text-xs font-medium uppercase tracking-wide text-gray-600 dark:text-gray-400">
+                        {stat}
+                      </div>
+                      <input
+                        type="number"
+                        min={0}
+                        max={31}
+                        value={customData.ivs[stat as keyof typeof customData.ivs]}
+                        onChange={e => updateIV(stat as any, e.target.value)}
+                        className="w-full text-center border rounded py-1.5 text-sm dark:bg-gray-800 dark:border-gray-700"
+                        placeholder="IV"
+                      />
+                      <input
+                        type="number"
+                        min={0}
+                        max={252}
+                        step={4}
+                        value={customData.evs[stat as keyof typeof customData.evs]}
+                        onChange={e => updateEV(stat as any, e.target.value)}
+                        className="w-full text-center border rounded py-1.5 text-sm dark:bg-gray-800 dark:border-gray-700"
+                        placeholder="EV"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* 3. Moves + Tera + Ball */}
+              <div className="space-y-4">
+                <h4 className="font-semibold text-lg border-b pb-1 flex items-center gap-2">
+                  Moves
+                  {isLoadingData && <span className="text-xs text-gray-500">(loading…)</span>}
+                </h4>
+
+                <div className="space-y-2">
+                  {[0,1,2,3].map(i => (
+                    <select
+                      key={i}
+                      value={customData.moves[i]}
+                      onChange={e => {
+                        const copy = [...customData.moves];
+                        copy[i] = e.target.value;
+                        setCustomData(p => ({ ...p, moves: copy }));
+                      }}
+                      disabled={isLoadingData}
+                      className="w-full border rounded-lg px-3 py-2 dark:bg-gray-800 dark:border-gray-700 disabled:opacity-50"
+                    >
+                      <option value="">Move {i+1} — empty</option>
+                      {availableMoves.map(m => (
+                        <option key={m} value={m}>{m}</option>
+                      ))}
+                    </select>
+                  ))}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Ability
-                  </label>
+                  <label className="block text-sm mb-1 font-medium">Tera Type</label>
                   <select
-                    value={customData.ability}
-                    onChange={(e) => setCustomData(prev => ({ ...prev, ability: e.target.value }))}
-                    className="w-full px-3 py-2 text-base border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-green-900 dark:text-white"
+                    value={customData.teraType}
+                    onChange={e => setCustomData(p => ({ ...p, teraType: e.target.value }))}
+                    className="w-full border rounded-lg px-3 py-2 dark:bg-gray-800 dark:border-gray-700"
                   >
-                    <option value="">Select Ability</option>
-                    {availableAbilities.map(ability => (
-                      <option key={ability} value={ability.toLowerCase().replace(/ /g, '-')}>{ability}</option>
-                    ))}
+                    {TERA_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                   </select>
                 </div>
+
+                <div>
+                  <label className="block text-sm mb-1 font-medium">Poké Ball</label>
+                  <select
+                    value={customData.ball}
+                    onChange={e => setCustomData(p => ({ ...p, ball: e.target.value }))}
+                    className="w-full border rounded-lg px-3 py-2 dark:bg-gray-800 dark:border-gray-700"
+                  >
+                    {COMMON_BALLS.map(b => <option key={b} value={b}>{b}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              {/* 4. Game + Actions + Export */}
+              <div className="space-y-5">
+                <div>
+                  <label className="block text-sm mb-1 font-medium">Game</label>
+                  <select
+                    value={selectedGame}
+                    onChange={e => setSelectedGame(e.target.value)}
+                    className="w-full border rounded-lg px-3 py-2 dark:bg-gray-800 dark:border-gray-700"
+                  >
+                    <option value="scarlet-violet">Scarlet / Violet</option>
+                    <option value="sword-shield">Sword / Shield</option>
+                    <option value="bdsp">BDSP</option>
+                    <option value="legends-arceus">Legends: Arceus</option>
+                    <option value="legends-za">Legends: Z-A</option>
+                  </select>
+                </div>
+
+                {pokemonOwned && (
+                  <div className="bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-200 px-4 py-2 rounded-lg text-center text-sm font-medium">
+                    ✓ Already in your Pokédex
+                  </div>
+                )}
 
                 <div className="space-y-3">
-                  <label className="flex items-center space-x-2 text-sm text-gray-700 dark:text-gray-300">
-                    <input
-                      type="checkbox"
-                      checked={customData.shiny}
-                      onChange={(e) => setCustomData(prev => ({ ...prev, shiny: e.target.checked }))}
-                      className="rounded text-yellow-500"
-                    />
-                    <span><img src="/masklicon.png" alt="Shiny" className="w-5 h-5 inline mr-1" /> Shiny</span>
-                  </label>
-                  <label className="flex items-center space-x-2 text-sm text-gray-700 dark:text-gray-300">
-                    <input
-                      type="checkbox"
-                      checked={customData.alpha}
-                      onChange={(e) => setCustomData(prev => ({ ...prev, alpha: e.target.checked }))}
-                      className="rounded text-purple-500"
-                    />
-                    <span><img src="/masklicon.png" alt="Alpha" className="w-5 h-5 inline mr-1" /> Alpha</span>
-                  </label>
-                </div>
-              </div>
-            </div>
-
-            {/* Column 2: Stats */}
-            <div className="w-full sm:w-80 space-y-4">
-              <div className="flex justify-between items-center">
-                <h4 className="text-base font-semibold text-green-900 dark:text-white">Stats</h4>
-                <div className="text-sm text-gray-600 dark:text-gray-400">
-                  EVs: {getEVTotal()}/510
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-                {['hp', 'attack', 'defense', 'special-attack', 'special-defense', 'speed'].map((stat) => (
-                  <div key={stat} className="space-y-2">
-                    <div className="text-center text-sm font-medium text-gray-700 dark:text-gray-300 capitalize">
-                      {stat.replace('-', '').slice(0, 3)}
-                    </div>
-                    <input
-                      type="number"
-                      min="0"
-                      max="31"
-                      value={customData.ivs[stat as keyof typeof customData.ivs]}
-                      onChange={(e) => updateIV(stat, parseInt(e.target.value) || 0)}
-                      className="w-full px-2 py-1 text-sm text-center border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-green-900 dark:text-white"
-                      placeholder="IV"
-                    />
-                    <input
-                      type="number"
-                      min="0"
-                      max="252"
-                      step="4"
-                      value={customData.evs[stat as keyof typeof customData.evs]}
-                      onChange={(e) => updateEV(stat, parseInt(e.target.value) || 0)}
-                      className="w-full px-2 py-1 text-sm text-center border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-green-900 dark:text-white"
-                      placeholder="EV"
-                    />
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Column 3: Moves */}
-            <div className="w-full sm:w-64 space-y-4">
-              <h4 className="text-base font-semibold text-green-900 dark:text-white">
-                Moves {isLoadingMoves && <span className="text-xs font-normal text-gray-500">(Loading...)</span>}
-              </h4>
-              
-              <div className="space-y-3">
-                {[0, 1, 2, 3].map((slot) => (
-                  <select
-                    key={slot}
-                    value={customData.moves[slot]}
-                    onChange={(e) => {
-                      const newMoves = [...customData.moves];
-                      newMoves[slot] = e.target.value;
-                      setCustomData(prev => ({ ...prev, moves: newMoves }));
-                    }}
-                    className="w-full px-3 py-2 text-base border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-green-900 dark:text-white"
+                  <a
+                    href="https://discord.gg/blaines"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block text-center py-3 px-4 bg-gradient-to-r from-indigo-600 to-purple-700 text-white rounded-lg font-semibold hover:brightness-110 transition"
                   >
-                    <option value="">Move {slot + 1}</option>
-                    {availableMoves.map(move => (
-                      <option key={move} value={move}>{move}</option>
-                    ))}
-                  </select>
-                ))}
-              </div>
-            </div>
+                    💬 Join Discord
+                  </a>
 
-            {/* Column 4: Game & Buttons */}
-            <div className="w-full sm:w-56 space-y-4">
-              {/* Game Selector */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Game
-                </label>
-                <select
-                  value={selectedGame}
-                  onChange={(e) => setSelectedGame(e.target.value)}
-                  className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-green-900 dark:text-white"
-                >
-                  <option value="scarlet-violet">Scarlet & Violet</option>
-                  <option value="sword-shield">Sword & Shield</option>
-                  <option value="bdsp">Brilliant Diamond</option>
-                  <option value="legends-arceus">Legends: Arceus</option>
-                  <option value="legends-za">Legends: Z-A</option>
-                </select>
-              </div>
+                  <button
+                    onClick={handleValidate}
+                    disabled={isLoading || isLoadingData}
+                    className="w-full py-3 px-4 bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-lg font-semibold disabled:opacity-60 hover:brightness-110 transition"
+                  >
+                    ✅ Validate
+                  </button>
 
-              {/* Owned Status */}
-              {isPokemonOwned && (
-                <div className="px-3 py-2 bg-green-100 dark:bg-green-900/30 rounded-lg text-center">
-                  <span className="text-green-700 dark:text-green-300 text-sm font-medium">✓ Already Owned</span>
+                  <button
+                    onClick={handleTrade}
+                    disabled={isLoading || isLoadingData}
+                    className="w-full py-3 px-4 bg-gradient-to-r from-green-600 to-emerald-700 text-white rounded-lg font-semibold disabled:opacity-60 hover:brightness-110 transition"
+                  >
+                    {isLoading ? 'Sending…' : '🔄 Start Trade'}
+                  </button>
                 </div>
-              )}
 
-              {/* Action Buttons */}
-              <div className="space-y-3">
-                {/* Button 1: Join Discord */}
-                <a
-                  href="https://discord.gg/blaines"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full block text-center bg-gradient-to-r from-indigo-500 to-purple-600 text-white py-3 px-4 rounded-lg text-sm font-bold hover:from-indigo-600 hover:to-purple-700 transition-all"
-                >
-                  💬 Join Discord
-                </a>
-
-                {/* Button 2: Validate */}
-                <button
-                  onClick={validatePokemonForm}
-                  disabled={isLoading}
-                  className="w-full bg-gradient-to-r from-blue-500 to-cyan-600 text-white py-3 px-4 rounded-lg text-sm font-bold hover:from-blue-600 hover:to-cyan-700 disabled:opacity-50 transition-all"
-                >
-                  ✅ Validate Pokemon
-                </button>
-
-                {/* Button 3: Trade */}
-                <button
-                  onClick={handleTradeOnSite}
-                  disabled={isLoading}
-                  className="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white py-3 px-4 rounded-lg text-sm font-bold hover:from-green-600 hover:to-emerald-700 disabled:opacity-50 transition-all"
-                >
-                  {isLoading ? 'Processing...' : '🔄 Start Trade'}
-                </button>
+                {/* Showdown Export Preview */}
+                {/* Showdown Export Preview Section */}
+<div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 text-sm font-mono whitespace-pre-wrap border border-gray-200 dark:border-gray-700">
+  <div className="font-semibold mb-2 text-base">Trade Command Preview</div>
+  {commandText}
+  <button
+    onClick={() => navigator.clipboard.writeText(commandText)}
+    className="mt-3 text-xs text-blue-600 dark:text-blue-400 hover:underline block"
+  >
+    Copy to clipboard
+  </button>
+</div>
               </div>
 
-              {/* Pokemon Preview */}
-              <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
-                <h4 className="text-base font-semibold text-green-900 dark:text-white mb-3 text-center">
-                  Preview
-                </h4>
-                <div className="flex justify-center space-x-4">
-                  <div className="text-center">
-                    <img
-                      src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${pokemon.id}.png`}
-                      alt={pokemon.name}
-                      className="w-20 h-20 mx-auto"
-                    />
-                    <div className="text-sm text-gray-600 dark:text-gray-400">Normal</div>
-                  </div>
-                  <div className="text-center">
-                    <img
-                      src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/shiny/${pokemon.id}.png`}
-                      alt={`${pokemon.name} shiny`}
-                      className="w-20 h-20 mx-auto"
-                    />
-                    <div className="text-sm text-gray-600 dark:text-gray-400">Shiny</div>
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
         </div>
-
-        {/* Trade Modal */}
-        {showModal && modalContent && (
-          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 p-4">
-            <div className="bg-gradient-to-b from-green-600 to-green-700 rounded-2xl max-w-md w-full overflow-hidden shadow-2xl border border-green-400/30">
-              {/* Header - Green */}
-              <div className="bg-gradient-to-r from-green-500 to-emerald-600 py-4 px-6 text-center">
-                <div className="text-3xl mb-1">✅</div>
-                <h2 className="text-xl font-bold text-white">Trade Initiated!</h2>
-              </div>
-
-              {/* Body */}
-              <div className="p-5 space-y-4">
-                {/* Pokemon Info */}
-                <div className="bg-white/10 rounded-xl p-4 text-center">
-                  <div className="flex items-center justify-center space-x-3 mb-2">
-                    <img
-                      src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${pokemon.id}.png`}
-                      alt={pokemon.name}
-                      className="w-16 h-16"
-                    />
-                    <div className="text-left">
-                      <div className="text-white font-bold">{formatPokemonName(pokemon.name)}</div>
-                      <div className="text-green-200 text-sm">Level {customData.level} {customData.shiny ? '✨ Shiny' : ''}</div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Link Code */}
-                <div className="bg-gray-800/60 rounded-xl p-4 border border-gray-700 text-center">
-                  <div className="text-gray-300 text-sm mb-1">Your Trade Link Code</div>
-                  <div className="text-4xl font-bold text-green-400 tracking-widest">{modalContent.command}</div>
-                </div>
-
-                {/* Queue Position */}
-                <div className="flex items-center justify-between bg-white/10 rounded-xl p-4">
-                  <div className="text-white">Queue Position</div>
-                  <div className="text-green-300 font-bold text-xl">#{modalContent.queuePosition || 1}</div>
-                </div>
-
-                {/* Warnings if any */}
-                {modalContent.warnings && modalContent.warnings.length > 0 && (
-                  <div className="bg-yellow-500/20 rounded-xl p-3 text-yellow-200 text-sm">
-                    {modalContent.warnings.join(', ')}
-                  </div>
-                )}
-
-                {/* Mark as Obtained Button */}
-                {!isPokemonOwned && (
-                  <button
-                    onClick={async () => {
-                      await addOwnedPokemon({ 
-                        id: pokemon.id, 
-                        name: pokemon.name, 
-                        shiny: customData.shiny,
-                        game: selectedGame
-                      });
-                      alert('Pokemon added to your Pokedex!');
-                    }}
-                    className="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white py-3 px-4 rounded-xl font-bold hover:from-green-600 hover:to-emerald-700 transition-all"
-                  >
-                    ✅ Mark as Obtained
-                  </button>
-                )}
-
-                {/* Premium Button */}
-                <button
-                  onClick={() => {
-                    window.location.href = '/last-premium';
-                  }}
-                  className="w-full bg-gradient-to-r from-purple-500 to-pink-600 text-white py-3 px-4 rounded-xl font-bold hover:from-purple-600 hover:to-pink-700 transition-all"
-                >
-                  ⭐ Join Premium
-                </button>
-
-                {/* Close Button */}
-                <button
-                  onClick={() => {
-                    setShowModal(false);
-                  }}
-                  className="w-full bg-white/20 text-white py-3 px-4 rounded-xl font-bold hover:bg-white/30 transition-all"
-                >
-                  Close
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Validation Modal */}
-        {showValidateModal && modalContent && (
-          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 p-4">
-            <div className={`rounded-2xl max-w-md w-full overflow-hidden shadow-2xl border ${
-              modalContent.isValid 
-                ? 'bg-gradient-to-b from-green-600 to-green-700 border-green-400/30' 
-                : 'bg-gradient-to-b from-red-600 to-red-700 border-red-400/30'
-            }`}>
-              {/* Header */}
-              <div className={`py-4 px-6 text-center ${
-                modalContent.isValid 
-                  ? 'bg-gradient-to-r from-green-500 to-emerald-600' 
-                  : 'bg-gradient-to-r from-red-500 to-orange-600'
-              }`}>
-                <div className="text-3xl mb-1">{modalContent.isValid ? '✅' : '❌'}</div>
-                <h2 className="text-xl font-bold text-white">{modalContent.title}</h2>
-              </div>
-
-              {/* Body */}
-              <div className="p-5 space-y-4">
-                {/* Pokemon Info */}
-                <div className="bg-white/10 rounded-xl p-4 text-center">
-                  <div className="flex items-center justify-center space-x-3">
-                    <img
-                      src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${pokemon.id}.png`}
-                      alt={pokemon.name}
-                      className="w-12 h-12"
-                    />
-                    <div className="text-left">
-                      <div className="text-white font-bold">{formatPokemonName(pokemon.name)}</div>
-                      <div className="text-green-200 text-sm">Level {customData.level} {customData.shiny ? '✨ Shiny' : ''}</div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Message */}
-                <div className={`rounded-xl p-4 text-center ${
-                  modalContent.isValid ? 'bg-green-500/20' : 'bg-red-500/20'
-                }`}>
-                  <p className={`text-sm ${modalContent.isValid ? 'text-green-200' : 'text-red-200'}`}>
-                    {modalContent.message}
-                  </p>
-                </div>
-
-                {/* Errors if invalid */}
-                {modalContent.errors && modalContent.errors.length > 0 && (
-                  <div className="bg-red-500/20 rounded-xl p-3 text-red-200 text-sm max-h-32 overflow-y-auto">
-                    {modalContent.errors.map((err, i) => (
-                      <div key={i} className="mb-1">• {err}</div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Close Button */}
-                <button
-                  onClick={() => {
-                    setShowValidateModal(false);
-                  }}
-                  className="w-full bg-white/20 text-white py-3 px-4 rounded-xl font-bold hover:bg-white/30 transition-all"
-                >
-                  Close
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
-    </div>
+
+      {/* Validation Modal */}
+      {showValidateModal && modalContent && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 px-4">
+          <div className={`rounded-2xl max-w-lg w-full overflow-hidden shadow-2xl border ${
+            modalContent.isValid
+              ? 'bg-gradient-to-b from-green-700 to-green-900 border-green-400/40'
+              : 'bg-gradient-to-b from-red-700 to-red-900 border-red-400/40'
+          }`}>
+            <div className={`py-6 px-6 text-center ${
+              modalContent.isValid
+                ? 'bg-gradient-to-r from-green-600 to-emerald-700'
+                : 'bg-gradient-to-r from-red-600 to-rose-700'
+            }`}>
+              <div className="text-5xl mb-3">{modalContent.isValid ? '✅' : '⚠️'}</div>
+              <h2 className="text-2xl font-bold text-white">{modalContent.title}</h2>
+            </div>
+
+            <div className="p-6 space-y-5 text-center">
+              <p className="whitespace-pre-line text-gray-200 text-sm leading-relaxed">
+                {modalContent.message}
+              </p>
+
+              {modalContent.errors?.length > 0 && (
+                <div className="bg-black/30 rounded-lg p-4 text-left text-red-200 text-sm max-h-60 overflow-y-auto">
+                  {modalContent.errors.map((err: string, i: number) => (
+                    <div key={i}>• {err}</div>
+                  ))}
+                </div>
+              )}
+
+              {modalContent.warnings?.length > 0 && (
+                <div className="bg-yellow-900/40 rounded-lg p-4 text-yellow-200 text-sm">
+                  {modalContent.warnings.join('\n')}
+                </div>
+              )}
+
+              <button
+                onClick={() => setShowValidateModal(false)}
+                className="w-full py-3 bg-white/20 hover:bg-white/30 text-white rounded-xl font-medium transition"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Trade Success Modal */}
+      {showModal && modalContent && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 px-4">
+          <div className="bg-gradient-to-b from-green-700 to-green-900 rounded-2xl max-w-md w-full overflow-hidden shadow-2xl border border-green-400/40">
+            <div className="bg-gradient-to-r from-green-600 to-emerald-700 py-6 px-6 text-center">
+              <div className="text-5xl mb-3">✅</div>
+              <h2 className="text-2xl font-bold text-white">Trade Started!</h2>
+            </div>
+
+            <div className="p-6 space-y-6">
+              <div className="bg-white/10 rounded-xl p-4 text-center">
+                <div className="font-bold text-lg mb-1">{formatPokemonName(pokemon.name)}</div>
+                <div className="text-green-200 text-sm">
+                  Lv. {customData.level} • {customData.shiny ? 'Shiny ✨' : 'Normal'}
+                </div>
+              </div>
+
+              <div className="bg-gray-900/60 rounded-xl p-5 text-center border border-gray-700">
+                <div className="text-gray-300 text-sm mb-2">Link Code</div>
+                <div className="text-5xl font-bold font-mono tracking-widest text-green-400">
+                  {modalContent.command}
+                </div>
+              </div>
+
+              <div className="flex justify-between bg-white/10 rounded-xl p-4">
+                <span>Position in queue</span>
+                <span className="font-bold text-xl text-green-300">#{modalContent.queuePosition}</span>
+              </div>
+
+              <button
+                onClick={() => setShowModal(false)}
+                className="w-full py-3 bg-white/20 hover:bg-white/30 text-white rounded-xl font-medium transition"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
