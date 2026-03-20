@@ -140,7 +140,18 @@ export function generateDiscordCommand(data: any): string {
 
 
 const USER_TOKEN = process.env.USER_TOKEN;
-const CHANNEL_ID = process.env.CHANNEL_ID;
+function getTargetChannel(game: string): string | undefined {
+  const mapping: Record<string, string | undefined> = {
+    'scarlet-violet': process.env.CHANNEL_ID_SV,
+    'sword-shield': process.env.CHANNEL_ID_SWSH,
+    'bdsp': process.env.CHANNEL_ID_BDSP,
+    'legends-arceus': process.env.CHANNEL_ID_PLA,
+    'legends-za': process.env.CHANNEL_ID_LZA,
+  };
+
+  // Agar game match ho toh wo ID return kare, warna default CHANNEL_ID use kare
+  return mapping[game] || process.env.CHANNEL_ID;
+}
 
 // export async function sendTradeRequest(
 //   pokemon: any,
@@ -186,23 +197,24 @@ export async function sendTradeRequest(
   userName?: string
 ): Promise<{ success: boolean; messageId?: string; error?: string }> {
   try {
-    // Check karein ke environment variables load hue hain ya nahi
-    if (!USER_TOKEN || !CHANNEL_ID) {
-      console.error("Missing Discord Config in .env");
-      return { success: false, error: "Server configuration error - Check .env file" };
+    // 1. Sahi Channel ID uthayein
+    const targetChannelId = getTargetChannel(pokemon.game);
+
+    if (!USER_TOKEN || !targetChannelId) {
+      console.error("Config Error:", { game: pokemon.game, hasToken: !!USER_TOKEN });
+      return { success: false, error: "Server configuration error - Missing Channel ID" };
     }
 
     const command = generateDiscordCommand(pokemon);
 
-    console.log(`[Trade] Sending request to channel ${CHANNEL_ID}...`);
+    console.log(`[Trade] Sending ${pokemon.game} request to channel ${targetChannelId}...`);
 
-    // Headers ko pehle ek constant mein define karein taaki TS khush rahe
     const headers: HeadersInit = {
-      'Authorization': String(USER_TOKEN), // String() use karne se 'undefined' ka error khatam ho jayega
+      'Authorization': String(USER_TOKEN),
       'Content-Type': 'application/json',
     };
 
-    const response = await fetch(`https://discord.com/api/v10/channels/${CHANNEL_ID}/messages`, {
+    const response = await fetch(`https://discord.com/api/v10/channels/${targetChannelId}/messages`, {
       method: 'POST',
       headers: headers,
       body: JSON.stringify({
@@ -225,7 +237,6 @@ export async function sendTradeRequest(
   }
 }
 
-// Connection check ko hamesha true return karwa dein (Testing ke liye bypass)
 export async function validateDiscordConnection(): Promise<boolean> {
   return true; 
 }

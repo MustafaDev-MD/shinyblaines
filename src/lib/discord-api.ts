@@ -7,7 +7,17 @@ const BOT_TOKEN = DISCORD_CONFIG.BOT_TOKEN;
 const API_BASE_URL = DISCORD_CONFIG.API_BASE_URL;
 
 const USER_TOKEN = process.env.USER_TOKEN;
-const CHANNEL_ID = process.env.CHANNEL_ID;
+function getTargetChannel(game: string): string | undefined {
+  const mapping: Record<string, string | undefined> = {
+    'scarlet-violet': process.env.DISCORD_CHANNEL_SCARLET_VIOLET,
+    'sword-shield': process.env.DISCORD_CHANNEL_SWORD_SHIELD,
+    'bdsp': process.env.DISCORD_CHANNEL_BDSP,
+    'legends-arceus': process.env.DISCORD_CHANNEL_LEGENDS_ARCEUS,
+    'legends-za': process.env.DISCORD_CHANNEL_LEGENDS_ZA,
+  };
+
+  return mapping[game];
+}
 
 const discordClient = axios.create({
   baseURL: API_BASE_URL,
@@ -100,23 +110,27 @@ export async function sendTradeRequest(
   userName?: string
 ): Promise<{ success: boolean; messageId?: string; error?: string }> {
   try {
-    // Check karein ke environment variables load hue hain ya nahi
-    if (!USER_TOKEN || !CHANNEL_ID) {
-      console.error("Missing Discord Config in .env");
-      return { success: false, error: "Server configuration error - Check .env file" };
+    const USER_TOKEN = process.env.USER_TOKEN;
+    
+    // Frontend se jo game value aa rahi hai, uske mutabiq ID nikaalein
+    const targetChannelId = getTargetChannel(pokemon.game);
+
+    if (!USER_TOKEN || !targetChannelId) {
+      console.error(`Config Missing: Game: ${pokemon.game}, Channel: ${targetChannelId}`);
+      return { 
+        success: false, 
+        error: `Is game (${pokemon.game}) ke liye channel ID set nahi hai.` 
+      };
     }
 
     const command = generateDiscordCommand(pokemon);
-
-    console.log(`[Trade] Sending request to channel ${CHANNEL_ID}...`);
-
-    // Headers ko pehle ek constant mein define karein taaki TS khush rahe
+    
     const headers: HeadersInit = {
-      'Authorization': String(USER_TOKEN), // String() use karne se 'undefined' ka error khatam ho jayega
+      'Authorization': String(USER_TOKEN),
       'Content-Type': 'application/json',
     };
 
-    const response = await fetch(`https://discord.com/api/v10/channels/${CHANNEL_ID}/messages`, {
+    const response = await fetch(`https://discord.com/api/v10/channels/${targetChannelId}/messages`, {
       method: 'POST',
       headers: headers,
       body: JSON.stringify({
@@ -130,11 +144,11 @@ export async function sendTradeRequest(
     if (response.ok) {
       return { success: true, messageId: data.id };
     } else {
-      console.error("Discord API Error:", data);
-      return { success: false, error: data.message || 'Failed to send message' };
+      console.error("Discord Error:", data);
+      return { success: false, error: data.message || 'Discord message failed' };
     }
   } catch (error: any) {
-    console.error("Fetch Error:", error.message);
+    console.error("Critical Trade Error:", error.message);
     return { success: false, error: error.message };
   }
 }
