@@ -53,7 +53,7 @@ export default function DashboardPage() {
         <div className="mb-6">
           <h1 className="text-3xl sm:text-4xl font-bold text-green-900 dark:text-white">Trainer Dashboard</h1>
           <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300 mt-1">
-            Apna account data, trade stats aur owned Pokemon yahan dekhein.
+            View your account details, trade stats, and owned Pokemon in one place.
           </p>
         </div>
 
@@ -62,7 +62,7 @@ export default function DashboardPage() {
             <div className="text-4xl mb-3">🔐</div>
             <h2 className="text-xl font-semibold text-green-900 dark:text-white">Sign in required</h2>
             <p className="text-gray-600 dark:text-gray-300 mt-2 mb-4">
-              Dashboard dekhne ke liye apne Google account se sign in karein.
+              Sign in with your Google account to access your dashboard.
             </p>
             <button
               onClick={signIn}
