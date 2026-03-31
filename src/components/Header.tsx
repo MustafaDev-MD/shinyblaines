@@ -14,6 +14,7 @@ export default function Header() {
 
   const navigation = [
     { name: 'Home', href: '/', icon: '🏠' },
+    { name: 'Dashboard', href: '/dashboard', icon: '📊' },
     { name: 'Mystery Gift', href: '/mystery-gift', icon: '🎁' },
     { name: 'Items', href: '/items', icon: '🎒' },
     { name: 'Premium', href: '/premium', icon: '💎' },

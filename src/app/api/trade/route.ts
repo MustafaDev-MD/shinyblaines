@@ -1,155 +1,214 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { validatePokemon, PokemonFormData } from '@/lib/legality';
-import { generateDiscordCommand, } from '@/lib/discord';
-import { sendTradeRequest, validateDiscordConnection } from '@/lib/discord-api';
-import { randomInt } from 'crypto';
+import { validatePokemon } from '@/lib/legality';
+import {
+  sendTradeRequest,
+  fetchTradeCodeFromDiscord,
+  fetchQueuePositionFromTradeChannel,
+  getDmChannelForGame,
+  getTargetChannel
+} from '@/lib/discord-api';
+import { getFirebaseDb } from '@/lib/firebase';
+import { 
+  doc, 
+  setDoc, 
+  collection, 
+  addDoc, 
+  serverTimestamp, 
+  query, 
+  getDocs, 
+  orderBy, 
+  arrayUnion, 
+  limit, 
+  updateDoc,
+  where
+} from 'firebase/firestore';
 
-// function generateLinkCode(): string {
-//   const numbers = Array.from({ length: 8 }, () => Math.floor(Math.random() * 10)).join('');
-//   return `${numbers.slice(0, 4)}-${numbers.slice(4)}`; 
-// }
+async function syncTradeUpdateEverywhere(
+  db: any,
+  userId: string,
+  discordMessageId: string | undefined,
+  payload: Record<string, any>
+) {
+  if (!discordMessageId || Object.keys(payload).length === 0) return;
 
-function generateLinkCode(): string {
-  const numbers = Array.from({ length: 8 }, () => randomInt(0, 10)).join('');
-  return `${numbers.slice(0, 4)}-${numbers.slice(4)}`;
-}
-
-// function generateQueueNumber(): number {
-//   return Math.floor(Math.random() * 20) + 1; 
-// }
-let currentQueue = 0;
-
-function generateQueueNumber(): number {
-  currentQueue++;
-  return currentQueue;
-}
-
-export async function POST(request: NextRequest) {
-  console.log('[DEBUG STEP 1] API /trade called at:', new Date().toISOString());
   try {
-    const body = await request.json();
-    console.log('[DEBUG STEP 2] Request body:', JSON.stringify(body, null, 2));
-    const { pokemon, userId, userName, customLinkCode } = body;
-
-    // Basic request validation
-    if (!pokemon || !pokemon.game || !pokemon.pokemonId) {
-      return NextResponse.json(
-        { success: false, error: 'Pokémon data aur game zaroori hai' },
-        { status: 400 }
-      );
-    }
-
-    // Prepare form data for legality check
-    const formData: PokemonFormData = {
-      id: pokemon.pokemonId,
-      name: pokemon.pokemonName,
-      species: pokemon.pokemonName,
-      level: pokemon.level,
-      shiny: pokemon.shiny,
-      alpha: pokemon.alpha,
-      moves: pokemon.moves || [],
-      ability: pokemon.ability || '',
-      nature: pokemon.nature,
-      ivs: pokemon.ivs || {},
-      evs: pokemon.evs || {},
-      item: pokemon.item || 'None',
-      game: pokemon.game,
-    };
-
-    // Run legality validation
-    const validation = validatePokemon(formData);
-    if (!validation.isValid) {
-      return NextResponse.json(
-        { success: false, error: validation.errors.join(' | ') },
-        { status: 400 }
-      );
-    }
-
-    // Link Code handling (custom ya random)
-    let linkCode = customLinkCode && typeof customLinkCode === 'string' && /^\d{4}-\d{4}$/.test(customLinkCode.trim())
-      ? customLinkCode.trim()
-      : generateLinkCode();
-
-    const queuePosition = generateQueueNumber();
-
-    // console.log('[DEBUG STEP 3] Before Discord try block - channelId:', channelId); 
-
-    // Try to send to Discord
-    let discordSuccess = false;
-    let discordMessageId: string | undefined;
-
-    try {
-      console.log('[DEBUG STEP 4] Importing discord-api...');
-      // const { sendTradeRequest, validateDiscordConnection } = await import('@/lib/discord-api');
-
-      console.log('[DEBUG STEP 5] Import successful');
-
-      console.log('[DEBUG STEP 6] Checking connection...');
-      // const isConnected = await validateDiscordConnection();
-      // console.log('[DEBUG STEP 7] Connection result:', isConnected);
-      // if (isConnected) {
-      //   console.log('[DEBUG STEP 8] Sending trade request...');
-      //   const result = await sendTradeRequest(pokemon, userId, userName);
-      //   console.log('[DEBUG STEP 9] Send result:', result);
-      //   if (result.success) {
-      //     discordSuccess = true;
-      //     discordMessageId = result.messageId;
-      //   } else {
-      //     console.error("Discord send failed:", result.error);
-      //   }
-      // }
-
-      // const result = await sendTradeRequest(pokemon, userId, userName);
-      const result = await sendTradeRequest(pokemon);
-if (result.success) {
-  discordSuccess = true;
-  discordMessageId = result.messageId;
-}
-    } catch (discordError: any) {
-      console.error('[Trade API] Discord failed:', discordError?.message || discordError);
-      console.error('[DEBUG STEP 10] Discord block failed:', discordError?.message || discordError);
-      console.error('[DEBUG STEP 10 Full error]', discordError);
-      // Silent fail — user ko fallback denge
-    }
-
-    // Final response
-    const response = {
-      // success: true,
-      success: discordSuccess,
-      linkCode,
-      queuePosition,
-      discordConnected: discordSuccess,
-      discordMessageId,
-      warnings: validation.warnings || [],
-      message: discordSuccess
-        ? 'Trade request Discord pe post ho gaya! Channel check karo aur game mein code daalo.'
-        : 'Trade ready hai! Discord connect nahi hua, lekin yeh code game mein use kar sakte ho.',
-    };
-
-    // Agar Discord fail hua to fallback command bhej do
-    if (!discordSuccess) {
-      (response as any).fallbackCommand = generateDiscordCommand(pokemon);
-    }
-
-    return NextResponse.json(response);
-
-  } catch (error: any) {
-    // console.error('[Trade API] Critical error:', error?.message || error);
-    console.error('[Trade API] Critical error:', {
-      message: error?.message,
-      stack: error?.stack,
-    });
-    return NextResponse.json(
-      { success: false, error: 'Server error — please try again later' },
-      { status: 500 }
+    const globalTradesQ = query(
+      collection(db, 'trades'),
+      where('discordMessageId', '==', discordMessageId)
     );
+    const globalTradesSnap = await getDocs(globalTradesQ);
+    for (const d of globalTradesSnap.docs) {
+      await updateDoc(d.ref, payload);
+    }
+
+    const userHistoryQ = query(
+      collection(db, 'users', userId, 'tradeHistory'),
+      where('discordMessageId', '==', discordMessageId)
+    );
+    const userHistorySnap = await getDocs(userHistoryQ);
+    for (const d of userHistorySnap.docs) {
+      await updateDoc(d.ref, payload);
+    }
+  } catch (e) {
+    console.error('Trade sync update error:', e);
   }
 }
 
-export async function GET() {
-  return NextResponse.json({
-    status: 'running',
-    timestamp: new Date().toISOString(),
-    message: 'Trade API live hai!'
-  });
+// --- Firestore Save Logic ---
+async function internalSaveToFirestore(userId: string, tradeData: any) {
+  const db = getFirebaseDb();
+  if (!db || !userId) return;
+  try {
+    const historyRef = collection(db, 'users', userId, 'trades');
+    await addDoc(historyRef, {
+      ...tradeData,
+      createdAt: serverTimestamp(),
+    });
+    
+    const userRef = doc(db, 'users', userId);
+    await setDoc(userRef, {
+      ownedPokemon: arrayUnion(tradeData.pokemonId?.toString()),
+      lastTrade: serverTimestamp()
+    }, { merge: true });
+    
+    console.log("🔥 Firebase: Trade Saved with status:", tradeData.status);
+  } catch (err) {
+    console.error("Firebase Save Error:", err);
+  }
+}
+
+// --- POST: Start Trade (Initial Request) ---
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { pokemon, userId } = body;
+
+    if (!pokemon || !pokemon.pokemonId) {
+      return NextResponse.json({ success: false, error: 'Data incomplete' }, { status: 400 });
+    }
+
+    // 1. Legality Check
+    const validation = validatePokemon(pokemon as any);
+    if (!validation.isValid) {
+      return NextResponse.json({ success: false, error: validation.errors.join(' | ') }, { status: 400 });
+    }
+
+    // Bot DM karega, isliye shuruat mein code 'WAITING' hoga
+    const initialLinkCode = 'WAITING';
+    const queuePosition = null;
+
+    // 2. Discord Send (Bot ko command bhejna)
+    let discordSuccess = false;
+    let discordMessageId = null;
+    try {
+      const result = await sendTradeRequest(pokemon);
+      if (result.success) {
+        discordSuccess = true;
+        discordMessageId = result.messageId;
+      }
+    } catch (e) { 
+      console.error("Discord Send Error:", e); 
+    }
+
+    // 3. Save to Firebase
+    if (userId) {
+      await internalSaveToFirestore(userId, {
+        ...pokemon,
+        linkCode: initialLinkCode,
+        status: 'pending',
+        queuePosition,
+        discordMessageId: discordMessageId
+      });
+    }
+
+    return NextResponse.json({
+      success: discordSuccess,
+      messageId: discordMessageId,
+      linkCode: initialLinkCode,
+      queuePosition,
+      message: discordSuccess ? 'Trade Started! Check Bot DM.' : 'Discord failed to send request.'
+    });
+
+  } catch (error: any) {
+    console.error("POST Route Error:", error);
+    return NextResponse.json({ success: false, error: 'Server Error' }, { status: 500 });
+  }
+}
+
+// --- GET: Polling for Bot DM (Link Code Fetcher) ---
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const userId = searchParams.get('userId');
+  const discordUser = searchParams.get('discordUser');
+
+  if (!userId) {
+    return NextResponse.json({ error: "Missing userId" }, { status: 400 });
+  }
+
+  const db = getFirebaseDb();
+  if (!db) return NextResponse.json({ error: "DB Error" }, { status: 500 });
+
+  try {
+    // 1. Firestore se latest 'pending' trade nikalein
+    const tradesRef = collection(db, 'users', userId, 'trades');
+    const q = query(tradesRef, orderBy('createdAt', 'desc'), limit(1));
+    const snap = await getDocs(q);
+    
+    if (snap.empty) return NextResponse.json({ success: true, data: null });
+
+    let latestTrade = { id: snap.docs[0].id, ...snap.docs[0].data() } as any;
+
+    // 2. Agar code abhi bhi 'WAITING' hai, toh Bot ka Personal DM check karein
+    if (latestTrade.linkCode === 'WAITING') {
+      const game = String(latestTrade.game || '');
+      const tradeChannelId = getTargetChannel(game);
+      // Selected game ke hisab se DM channel choose karein
+      const dmChannelId = getDmChannelForGame(game);
+      const tradeDoc = doc(db, 'users', userId, 'trades', latestTrade.id);
+      const updatePayload: Record<string, any> = {};
+
+      // Queue position channel se aati hai (DM se nahi)
+      if (tradeChannelId) {
+        const queueResult = await fetchQueuePositionFromTradeChannel(tradeChannelId);
+        if (queueResult.success && typeof queueResult.queuePosition === 'number') {
+          updatePayload.queuePosition = queueResult.queuePosition;
+          latestTrade.queuePosition = queueResult.queuePosition;
+        }
+      }
+      
+      if (dmChannelId) {
+        // fetchTradeCodeFromDiscord ab DM channel check karega
+        const discordResult = await fetchTradeCodeFromDiscord(dmChannelId, discordUser || '');
+
+        if (discordResult.success) {
+          if (discordResult.linkCode) {
+            updatePayload.linkCode = discordResult.linkCode;
+            updatePayload.status = 'ready';
+            updatePayload.botIGN = discordResult.botIGN || 'Bot';
+
+            latestTrade.linkCode = discordResult.linkCode;
+            latestTrade.status = 'ready';
+            latestTrade.botIGN = discordResult.botIGN;
+          }
+
+        }
+      }
+
+      if (Object.keys(updatePayload).length > 0) {
+        await updateDoc(tradeDoc, updatePayload);
+        await syncTradeUpdateEverywhere(
+          db,
+          userId,
+          latestTrade.discordMessageId,
+          updatePayload
+        );
+      }
+    }
+
+    return NextResponse.json({ success: true, data: latestTrade });
+
+  } catch (err: any) {
+    console.error("GET Route Polling Error:", err);
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+  }
 }

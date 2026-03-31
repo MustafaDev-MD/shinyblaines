@@ -11,6 +11,7 @@ import {
 import { validatePokemon, PokemonFormData } from '@/lib/legality';
 import { usePokedex } from '@/contexts/PokedexContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { saveTradeToFirestore } from '@/lib/firebase-service';
 
 interface BottomSheetProps {
   isOpen: boolean;
@@ -198,85 +199,6 @@ export default function BottomSheet({ isOpen, onClose, pokemon }: BottomSheetPro
     return result.isValid;
   };
 
-  // BottomSheet.tsx ke handleTrade function ke andar:
-// const handleTrade = async () => {
-//   const valid = await handleValidate();
-//   if (!valid) return;
-
-//   setIsLoading(true);
-
-//   try {
-//     const resp = await fetch('/api/trade', {
-//       method: 'POST',
-//       headers: { 'Content-Type': 'application/json' },
-//       body: JSON.stringify({
-//         pokemon: {
-//           pokemonName: formatPokemonName(pokemon.name),
-//           pokemonId: pokemon.id,
-//           shiny: customData.shiny,
-//           alpha: customData.alpha,
-//           level: customData.level,
-//           nature: customData.nature,
-//           ability: customData.ability,
-//           // Moves array ko saf-suthra karke bhejein
-//           moves: customData.moves.filter(m => m && m.trim() !== ''),
-//           ivs: customData.ivs,
-//           // EVs ki keys ko STAT_MAP se match hona chahiye
-//           evs: {
-//             hp: customData.evs.hp,
-//             attack: customData.evs.atk,      // 'atk' ko 'attack' kiya
-//             defense: customData.evs.def,     // 'def' ko 'defense' kiya
-//             'special-attack': customData.evs.spa, // 'spa' ko full name diya
-//             'special-defense': customData.evs.spd,
-//             speed: customData.evs.spe
-//           },
-//           item: customData.item,
-//           ball: customData.ball,
-//           teraType: customData.teraType,
-//           game: selectedGame,
-//           ot: customData.ot,
-//           tid: customData.tid,
-//           sid: customData.sid,
-//         },
-//         userId: user?.uid,
-//         userName: user?.displayName || 'Anonymous',
-//       }),
-//     });
-//     // ... baqi code same rahega
-
-//       const data = await resp.json();
-
-//       if (data.success || data.fallback) {
-//         const code = data.linkCode || Math.random().toString(36).slice(2, 8).toUpperCase();
-//         const pos = data.queuePosition || Math.floor(Math.random() * 20) + 1;
-
-//         addTradeToHistory?.({
-//           userId: user?.uid!,
-//           pokemonId: pokemon.id,
-//           pokemonName: pokemon.name,
-//           linkCode: code,
-//           status: 'pending',
-//           game: selectedGame,
-//         });
-
-//         setModalContent({
-//           title: 'Trade Started!',
-//           message: '',
-//           command: code,
-//           queuePosition: pos,
-//           warnings: data.warnings,
-//         });
-//         setShowModal(true);
-//       } else {
-//         alert(data.error || 'Trade request failed');
-//       }
-//     } catch (err) {
-//       alert('Connection error – please try again');
-//     } finally {
-//       setIsLoading(false);
-//     }
-//   };
-
 // BottomSheet.tsx ke handleTrade function ke andar ye object replace karein:
 
 const handleTrade = async () => {
@@ -285,71 +207,104 @@ const handleTrade = async () => {
 
   setIsLoading(true);
 
+  // Saara data ek variable mein nikaal lein taaki reuse ho sake
+  const tradePayload = {
+    pokemonName: formatPokemonName(pokemon.name),
+    pokemonId: pokemon.id,
+    shiny: customData.shiny,
+    alpha: customData.alpha,
+    level: customData.level,
+    nature: customData.nature,
+    ability: customData.ability,
+    moves: customData.moves.filter(m => m && m.trim() !== ''),
+    ivs: customData.ivs,
+    evs: customData.evs,
+    item: customData.item,
+    ball: customData.ball,
+    teraType: customData.teraType,
+    game: selectedGame,
+    ot: customData.ot,
+    tid: customData.tid,
+    sid: customData.sid,
+    nickname: customData.nickname,
+  };
+
   try {
     const resp = await fetch('/api/trade', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        pokemon: {
-          pokemonName: formatPokemonName(pokemon.name),
-          pokemonId: pokemon.id,
-          shiny: customData.shiny,
-          alpha: customData.alpha,
-          level: customData.level,
-          nature: customData.nature,
-          ability: customData.ability,
-          moves: customData.moves.filter(m => m && m.trim() !== ''),
-          ivs: customData.ivs,
-          // Yahan keys wahi rakhein jo discord.ts accept karta hai
-          evs: {
-            hp: customData.evs.hp,
-            atk: customData.evs.atk,
-            def: customData.evs.def,
-            spa: customData.evs.spa,
-            spd: customData.evs.spd,
-            spe: customData.evs.spe
-          },
-          item: customData.item,
-          ball: customData.ball,
-          teraType: customData.teraType,
-          game: selectedGame,
-          ot: customData.ot,
-          tid: customData.tid,
-          sid: customData.sid,
-        },
-        userId: user?.uid,
-        userName: user?.displayName || 'Anonymous',
+        pokemon: tradePayload,
+        userId: user?.uid || null, // Agar user nahi hai toh null bhej rahe hain
+        userName: user?.displayName || 'Guest Trainer',
       }),
     });
 
-    const data = await resp.json();
+    let data: {
+      success?: boolean;
+      error?: string;
+      linkCode?: string;
+      queuePosition?: number;
+      messageId?: string;
+    };
+    try {
+      const text = await resp.text();
+      data = text ? JSON.parse(text) : {};
+    } catch {
+      alert(
+        `Server ne valid JSON nahi diya (status ${resp.status}). ` +
+          `Kya \`npm run dev\` chal raha hai aur URL sahi hai?`
+      );
+      return;
+    }
 
-    console.log("API Response:", data);
+    if (!resp.ok) {
+      alert(data.error || `Request failed (${resp.status})`);
+      return;
+    }
 
     if (data.success) {
-      // Trade successfully queued in Discord
+      const finalUserId = user?.uid || `guest_${Math.random().toString(36).substr(2, 9)}`;
+
+      try {
+        await saveTradeToFirestore(finalUserId, {
+          ...tradePayload,
+          discordMessageId: data.messageId,
+          linkCode: data.linkCode || 'WAITING',
+        });
+      } catch (fsErr) {
+        console.error('Firestore save (client) after trade:', fsErr);
+        // API / Discord already succeeded; Firestore rules ya network alag issue ho sakta hai
+      }
+
       setModalContent({
         title: 'Trade Started!',
         message: `Your trade is in queue. Link Code will be sent to Discord.`,
-        linkCode: data.linkCode,
-        queuePosition: data.queuePosition,
+        linkCode: data.linkCode || 'WAITING', // Ensure this matches the UI variable
+        queuePosition: data.queuePosition || '?',
         isValid: true
       });
       setShowModal(true);
-      addTradeToHistory?.({
-        userId: user?.uid!,
-        pokemonId: pokemon.id,
-        pokemonName: pokemon.name,
-        linkCode: data.linkCode,
-        status: 'pending',
-        game: selectedGame,
-      });
+
+      // Pokedex Context update (Agar user login hai)
+      if (user?.uid) {
+        addTradeToHistory?.({
+          userId: user.uid,
+          pokemonId: pokemon.id,
+          pokemonName: pokemon.name,
+          linkCode: data.linkCode || 'PENDING',
+          status: 'pending',
+          game: selectedGame,
+        });
+      }
     } else {
       alert(data.error || 'Bot error: Could not start trade');
     }
   } catch (err) {
     console.error("Trade Error:", err);
-    alert('Connection error – check if API route is running');
+    alert(
+      'Network error – page refresh karke phir try karein. Agar static hosting use ho rahi ho to API routes deploy par kaam nahi karte.'
+    );
   } finally {
     setIsLoading(false);
   }
@@ -407,7 +362,58 @@ const generateCommandText = () => {
 
 const commandText = generateCommandText();
 
+useEffect(() => {
+  let interval: NodeJS.Timeout;
+
+  // Sirf tabhi check karein agar modal khula hai aur code 'WAITING' hai
+  if (isOpen && modalContent?.linkCode === 'WAITING' && user?.uid) {
+    
+    interval = setInterval(async () => {
+      try {
+        // 'yourDiscordName' ki jagah wo name use karein jo bot ko gaya hai (e.g., customData.ot)
+        const discordName = customData.ot || user.displayName || 'Guest';
+        
+        const res = await fetch(
+          `/api/trade?userId=${encodeURIComponent(user.uid)}&discordUser=${encodeURIComponent(discordName)}`
+        );
+        const result = await res.json();
+
+        if (result.success && result.data) {
+          setModalContent((prev: typeof modalContent) => {
+            if (!prev) return prev;
+
+            const next = {
+              ...prev,
+              queuePosition: result.data.queuePosition ?? prev.queuePosition ?? '?',
+            } as any;
+
+            if (result.data.linkCode && result.data.linkCode !== 'WAITING') {
+              next.linkCode = result.data.linkCode;
+              next.title = 'Trade Ready!';
+              next.message = `Bot is ready! IGN: ${result.data.botIGN || 'Bot'}`;
+              next.isValid = true;
+            }
+
+            return next;
+          });
+
+          if (result.data.linkCode && result.data.linkCode !== 'WAITING') {
+            clearInterval(interval);
+          }
+        }
+      } catch (err) {
+        console.error("Polling error:", err);
+      }
+    }, 5000); // 5 seconds interval
+  }
+
+  return () => {
+    if (interval) clearInterval(interval);
+  };
+}, [isOpen, modalContent?.linkCode, user?.uid, customData.ot]);
+
   if (!isOpen) return null;
+  
 
   return (
     <>
@@ -821,7 +827,7 @@ const commandText = generateCommandText();
               <div className="bg-gray-900/60 rounded-xl p-5 text-center border border-gray-700">
                 <div className="text-gray-300 text-sm mb-2">Link Code</div>
                 <div className="text-5xl font-bold font-mono tracking-widest text-green-400">
-                  {modalContent.command}
+                  {modalContent.linkCode}
                 </div>
               </div>
 
