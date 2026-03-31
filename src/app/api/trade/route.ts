@@ -82,6 +82,10 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { pokemon, userId } = body;
+    const effectiveUserId =
+      typeof userId === 'string' && userId.trim().length > 0
+        ? userId
+        : `guest_${Math.random().toString(36).slice(2, 11)}`;
 
     if (!pokemon || !pokemon.pokemonId) {
       return NextResponse.json({ success: false, error: 'Data incomplete' }, { status: 400 });
@@ -111,18 +115,17 @@ export async function POST(request: NextRequest) {
     }
 
     // 3. Save to Firebase
-    if (userId) {
-      await internalSaveToFirestore(userId, {
-        ...pokemon,
-        linkCode: initialLinkCode,
-        status: 'pending',
-        queuePosition,
-        discordMessageId: discordMessageId
-      });
-    }
+    await internalSaveToFirestore(effectiveUserId, {
+      ...pokemon,
+      linkCode: initialLinkCode,
+      status: 'pending',
+      queuePosition,
+      discordMessageId: discordMessageId
+    });
 
     return NextResponse.json({
       success: discordSuccess,
+      userId: effectiveUserId,
       messageId: discordMessageId,
       linkCode: initialLinkCode,
       queuePosition,

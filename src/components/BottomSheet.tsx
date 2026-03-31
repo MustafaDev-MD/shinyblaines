@@ -246,6 +246,7 @@ const handleTrade = async () => {
       linkCode?: string;
       queuePosition?: number;
       messageId?: string;
+      userId?: string;
     };
     try {
       const text = await resp.text();
@@ -264,7 +265,7 @@ const handleTrade = async () => {
     }
 
     if (data.success) {
-      const finalUserId = user?.uid || `guest_${Math.random().toString(36).substr(2, 9)}`;
+      const finalUserId = data.userId || user?.uid || `guest_${Math.random().toString(36).substr(2, 9)}`;
 
       try {
         await saveTradeToFirestore(finalUserId, {
@@ -282,6 +283,7 @@ const handleTrade = async () => {
         message: `Your trade is in queue. Link Code will be sent to Discord.`,
         linkCode: data.linkCode || 'WAITING', // Ensure this matches the UI variable
         queuePosition: data.queuePosition || '?',
+        pollUserId: finalUserId,
         isValid: true
       });
       setShowModal(true);
@@ -366,15 +368,15 @@ useEffect(() => {
   let interval: NodeJS.Timeout;
 
   // Sirf tabhi check karein agar modal khula hai aur code 'WAITING' hai
-  if (isOpen && modalContent?.linkCode === 'WAITING' && user?.uid) {
+  if (isOpen && modalContent?.linkCode === 'WAITING' && modalContent?.pollUserId) {
     
     interval = setInterval(async () => {
       try {
         // 'yourDiscordName' ki jagah wo name use karein jo bot ko gaya hai (e.g., customData.ot)
-        const discordName = customData.ot || user.displayName || 'Guest';
+        const discordName = customData.ot || user?.displayName || 'Guest';
         
         const res = await fetch(
-          `/api/trade?userId=${encodeURIComponent(user.uid)}&discordUser=${encodeURIComponent(discordName)}`
+          `/api/trade?userId=${encodeURIComponent(modalContent.pollUserId)}&discordUser=${encodeURIComponent(discordName)}`
         );
         const result = await res.json();
 
@@ -410,7 +412,7 @@ useEffect(() => {
   return () => {
     if (interval) clearInterval(interval);
   };
-}, [isOpen, modalContent?.linkCode, user?.uid, customData.ot]);
+}, [isOpen, modalContent?.linkCode, modalContent?.pollUserId, user?.displayName, customData.ot]);
 
   if (!isOpen) return null;
   

@@ -12,6 +12,30 @@ export default function Header() {
   const { theme, mounted } = useTheme();
   const { user, signIn, signOut } = useAuth();
 
+  const handleSignIn = async () => {
+    try {
+      await signIn();
+    } catch (error: any) {
+      const message = String(error?.message || '');
+      const code = String(error?.code || '');
+
+      if (code.includes('popup-blocked')) {
+        alert('Popup was blocked by the browser. Please allow popups and try again.');
+        return;
+      }
+      if (code.includes('unauthorized-domain')) {
+        alert('This domain is not authorized in Firebase Authentication. Add your Vercel domain in Firebase Auth > Settings > Authorized domains.');
+        return;
+      }
+      if (message.includes('Firebase not configured')) {
+        alert('Firebase is not configured in this environment. Check NEXT_PUBLIC_FIREBASE_* variables in Vercel and redeploy.');
+        return;
+      }
+
+      alert(`Sign-in failed: ${code || message || 'Unknown error'}`);
+    }
+  };
+
   const navigation = [
     { name: 'Home', href: '/', icon: '🏠' },
     { name: 'Dashboard', href: '/dashboard', icon: '📊' },
@@ -77,7 +101,7 @@ export default function Header() {
               </div>
             ) : (
               <button 
-                onClick={signIn}
+                onClick={handleSignIn}
                 className="px-4 py-2 rounded-lg text-sm font-medium text-white border border-white/30 hover:bg-white/20 transition-all duration-200"
               >
                 Sign In
@@ -97,7 +121,7 @@ export default function Header() {
               </button>
             ) : (
               <button 
-                onClick={signIn}
+                onClick={handleSignIn}
                 className="px-3 py-2 rounded-lg text-sm font-medium text-white border border-white/30 hover:bg-white/20 transition-all duration-200"
               >
                 Sign In
@@ -189,7 +213,7 @@ export default function Header() {
                     </svg>
                   </div>
                   <button 
-                    onClick={signIn}
+                    onClick={handleSignIn}
                     className="w-full flex items-center justify-center px-4 py-3 rounded-lg text-base font-medium text-white border border-white/30 hover:bg-white/20 transition-all duration-200"
                   >
                     Sign In
