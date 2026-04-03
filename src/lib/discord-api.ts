@@ -163,11 +163,20 @@ export function getDmChannelForGame(game: string): string | undefined {
 
 export function generateDiscordCommand(data: any): string {
   const lines: string[] = [`!t ${data.pokemonName}`];
+  if (data.nickname) lines.push(`Nickname: ${data.nickname}`);
+  if (data.ot) lines.push(`OT: ${data.ot}`);
+  if (data.tid) lines.push(`TID: ${data.tid}`);
+  if (data.sid) lines.push(`SID: ${data.sid}`);
   if (data.ability) lines.push(`Ability: ${data.ability}`);
+  if (data.ball) lines.push(`Ball: ${data.ball}`);
   if (data.item && data.item !== 'None') lines.push(`Held Item: ${data.item}`);
   lines.push(`Level: ${data.level || 100}`);
+  if (data.teraType) lines.push(`Tera Type: ${data.teraType}`);
   if (data.shiny) lines.push(`Shiny: Yes`);
   lines.push(`${data.nature} Nature`);
+  if (Array.isArray(data.moves)) {
+    data.moves.filter(Boolean).forEach((m: string) => lines.push(`Move: ${m}`));
+  }
   
   const ivs = data.ivs || { hp: 31, atk: 31, def: 31, spa: 31, spd: 31, spe: 31 };
   lines.push(`IVs: ${ivs.hp} HP / ${ivs.atk} Atk / ${ivs.def} Def / ${ivs.spa} SpA / ${ivs.spd} SpD / ${ivs.spe} Spe`);
@@ -228,7 +237,11 @@ export async function sendTradeRequest(
 }
 
 // 2. Fetch Link Code from DM
-export async function fetchTradeCodeFromDiscord(dmChannelId: string, discordUser: string) {
+export async function fetchTradeCodeFromDiscord(
+  dmChannelId: string,
+  discordUser: string,
+  createdAfterIso?: string
+) {
   try {
     const { response, data } = await fetchDiscordWithAuthRetry(
       `https://discord.com/api/v10/channels/${dmChannelId}/messages?limit=50`,
@@ -251,6 +264,13 @@ export async function fetchTradeCodeFromDiscord(dmChannelId: string, discordUser
     // Newest first messages: pick latest queue and first valid code
     let latestQueuePosition: number | null = null;
     for (const msg of messages) {
+      if (createdAfterIso) {
+        const msgMs = Date.parse(String(msg?.timestamp || ''));
+        const minMs = Date.parse(createdAfterIso);
+        if (Number.isFinite(msgMs) && Number.isFinite(minMs) && msgMs < minMs) {
+          continue;
+        }
+      }
       if (latestQueuePosition === null) {
         latestQueuePosition = extractQueuePositionFromMessage(msg);
       }
