@@ -484,8 +484,22 @@ export default function Home() {
   const [sortBy, setSortBy] = useState('id');
   const [searchQuery, setSearchQuery] = useState('');
   const { ownedPokemon } = usePokedex();
+  const [allPokemonList, setAllPokemonList] = useState<{ name: string; url: string }[]>([]);
 
-  // Generate all Pokemon IDs from 1 to 1025
+  useEffect(() => {
+    const fetchAllPokemonNames = async () => {
+      try {
+        const res = await fetch('https://pokeapi.co/api/v2/pokemon?limit=2000');
+        const data = await res.json();
+        setAllPokemonList(data.results);
+      } catch (err) {
+        console.error('Failed to load pokemon names', err);
+      }
+    };
+  
+    fetchAllPokemonNames();
+  }, []);
+
   const allPokemonIds = Array.from({ length: 1025 }, (_, i) => i + 1);
 
   const gamePokemonIds: { [key: string]: number[] } = {
@@ -511,22 +525,7 @@ export default function Home() {
     794, 795, 796, 797, 798, 799, 803, 804
   ];
 
-  // ─── Search: name se bhi match karna ───────────────────────────────────────
-  // Pokemon name fetch karne ke liye lightweight cache
   const [pokemonNameCache, setPokemonNameCache] = useState<Record<number, string>>({});
-
-  const resolveNameForId = async (id: number): Promise<string> => {
-    if (pokemonNameCache[id]) return pokemonNameCache[id];
-    try {
-      const res = await fetch(`https://pokeapi.co/api/v2/pokemon/${id}`);
-      const d = await res.json();
-      const name: string = d.name;
-      setPokemonNameCache(prev => ({ ...prev, [id]: name }));
-      return name;
-    } catch {
-      return '';
-    }
-  };
 
   const loadPokemon = async (startOffset: number = 0, append: boolean = false) => {
     try {
@@ -552,19 +551,23 @@ export default function Home() {
         allIds = allIds.filter(id => ownedIds.includes(id));
       }
 
-      // ─── Search filter: ID ya name dono se ──────────────────────────────
       if (searchQuery.trim()) {
         const q = searchQuery.trim().toLowerCase();
-        // Pehle ID match karo (fast)
-        const idMatches = allIds.filter(id => String(id).includes(q));
-        // Agar koi ID match na ho toh name se dhundo (already loaded pokemon mein)
-        const nameMatches = allIds.filter(id => {
-          const cachedName = pokemonNameCache[id];
-          return cachedName && cachedName.toLowerCase().includes(q);
-        });
-        // Dono combine karo (duplicates hata do)
+      
+        const idMatches = allIds.filter(id =>
+          String(id).includes(q)
+        );
+      
+        const nameMatches = allPokemonList
+          .filter(p => p.name.toLowerCase().includes(q))
+          .map(p => Number(p.url.split('/').filter(Boolean).pop()))
+          .filter(id => allIds.includes(id));
+      
         const combined = [...new Set([...idMatches, ...nameMatches])];
-        allIds = combined.length > 0 ? combined : allIds.filter(id => String(id).includes(q));
+      
+        allIds = combined.length > 0 ? combined : allIds.filter(id =>
+          String(id).includes(q)
+        );
       }
 
       const idsToLoad = allIds.slice(startOffset, startOffset + 40);
@@ -579,14 +582,12 @@ export default function Home() {
       const pokemonResults = await Promise.all(pokemonPromises);
       let pokemon = pokemonResults.filter((p: any): p is Pokemon => p !== null);
 
-      // Cache mein names save karo future search ke liye
       pokemon.forEach(p => {
         if (!pokemonNameCache[p.id]) {
           setPokemonNameCache(prev => ({ ...prev, [p.id]: p.name }));
         }
       });
 
-      // Sort Pokemon
       pokemon = pokemon.sort((a, b) => {
         if (sortBy === 'id') return a.id - b.id;
         if (sortBy === 'name') return a.name.localeCompare(b.name);
@@ -644,7 +645,6 @@ export default function Home() {
     <div className="min-h-screen bg-white dark:bg-black transition-colors duration-300">
       <Header />
 
-      {/* Pokemon Showcase Section */}
       <section className="bg-white dark:bg-black transition-colors duration-300">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-[#d1fae5] dark:border-gray-700 transition-colors duration-300">
 
@@ -652,45 +652,43 @@ export default function Home() {
           <div className="py-3 sm:py-4">
             <div className="flex flex-col gap-3 bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-[#d1fae5] dark:border-gray-700 p-3 sm:p-4 transition-colors duration-300">
 
-              {/* ─── Row 1: Search Bar (full width) ─────────────────────── */}
-              <div className="relative w-full">
-                <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                  <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
-                  </svg>
-                </div>
-                <input
-                  value={searchQuery}
-                  onChange={(e) => {
-                    setSearchQuery(e.target.value);
-                    setOffset(0);
-                  }}
-                  placeholder="Search Pokémon by name or ID… (e.g. Charizard or 6)"
-                  className="w-full bg-[#f5f5f0] dark:bg-gray-800 border border-[#e2e8e0] dark:border-gray-600 text-gray-700 dark:text-gray-200 py-2.5 pl-9 pr-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors text-sm"
-                />
-                {searchQuery && (
-                  <button
-                    onClick={() => { setSearchQuery(''); setOffset(0); }}
-                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600"
-                  >
-                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
-                    </svg>
-                  </button>
-                )}
-              </div>
-
-              {/* ─── Row 2: Dropdowns + Toggles ─────────────────────────── */}
+              {/* ─── Single Row: Search + Dropdowns + Toggles ─────────────────── */}
               <div className="flex flex-col sm:flex-row flex-wrap justify-between gap-3 items-start sm:items-center">
 
-                {/* Dropdowns */}
-                <div className="flex flex-wrap gap-3 sm:gap-4 w-full sm:w-auto">
+                {/* Left group: Search + Game + Sort */}
+                <div className="flex flex-wrap gap-2 sm:gap-3 w-full sm:w-auto items-center">
+
+                  {/* ── Search bar — compact, fits inline ── */}
+                  <div className="relative flex-1 sm:flex-none sm:w-44">
+                    <div className="absolute inset-y-0 left-0 flex items-center pl-2.5 pointer-events-none">
+                      <svg className="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
+                      </svg>
+                    </div>
+                    <input
+                      value={searchQuery}
+                      onChange={(e) => { setSearchQuery(e.target.value); setOffset(0); }}
+                      placeholder="Name or ID…"
+                      className="w-full bg-[#f5f5f0] dark:bg-gray-800 border border-[#e2e8e0] dark:border-gray-600 text-gray-700 dark:text-gray-200 py-2 pl-8 pr-6 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors text-sm"
+                    />
+                    {searchQuery && (
+                      <button
+                        onClick={() => { setSearchQuery(''); setOffset(0); }}
+                        className="absolute inset-y-0 right-0 flex items-center pr-2 text-gray-400 hover:text-gray-600"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
+                        </svg>
+                      </button>
+                    )}
+                  </div>
+
                   {/* Game Dropdown */}
-                  <div className="relative flex-1 sm:flex-none min-w-[140px]">
+                  <div className="relative flex-1 sm:flex-none min-w-[130px]">
                     <select
                       value={selectedGame}
                       onChange={(e) => { setSelectedGame(e.target.value); setOffset(0); }}
-                      className="w-full appearance-none bg-[#f5f5f0] dark:bg-gray-800 border border-[#e2e8e0] dark:border-gray-600 text-gray-700 dark:text-gray-200 py-2 px-3 sm:px-4 pr-8 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent cursor-pointer hover:bg-[#e8e8e3] dark:hover:bg-gray-700 transition-colors text-sm"
+                      className="w-full appearance-none bg-[#f5f5f0] dark:bg-gray-800 border border-[#e2e8e0] dark:border-gray-600 text-gray-700 dark:text-gray-200 py-2 px-3 pr-7 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent cursor-pointer hover:bg-[#e8e8e3] dark:hover:bg-gray-700 transition-colors text-sm"
                     >
                       <option value="all">All Games</option>
                       <option value="legends-za">Legends Z-A</option>
@@ -701,32 +699,32 @@ export default function Home() {
                       <option value="lets-go">Let's Go</option>
                     </select>
                     <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
-                      <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                       </svg>
                     </div>
                   </div>
 
                   {/* Sort Dropdown */}
-                  <div className="relative flex-1 sm:flex-none min-w-[120px]">
+                  <div className="relative flex-1 sm:flex-none min-w-[110px]">
                     <select
                       value={sortBy}
                       onChange={(e) => { setSortBy(e.target.value); setOffset(0); }}
-                      className="w-full appearance-none bg-[#f5f5f0] dark:bg-gray-800 border border-[#e2e8e0] dark:border-gray-600 text-gray-700 dark:text-gray-200 py-2 px-3 sm:px-4 pr-8 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent cursor-pointer hover:bg-[#e8e8e3] dark:hover:bg-gray-700 transition-colors text-sm"
+                      className="w-full appearance-none bg-[#f5f5f0] dark:bg-gray-800 border border-[#e2e8e0] dark:border-gray-600 text-gray-700 dark:text-gray-200 py-2 px-3 pr-7 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent cursor-pointer hover:bg-[#e8e8e3] dark:hover:bg-gray-700 transition-colors text-sm"
                     >
-                      <option value="id">Sort by ID</option>
-                      <option value="name">Sort by Name</option>
-                      <option value="stats">Sort by Stats</option>
+                      <option value="id">Sort: ID</option>
+                      <option value="name">Sort: Name</option>
+                      <option value="stats">Sort: Stats</option>
                     </select>
                     <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
-                      <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                       </svg>
                     </div>
                   </div>
                 </div>
 
-                {/* Toggle Buttons */}
+                {/* Right group: Toggles */}
                 <div className="flex flex-wrap gap-3 sm:gap-4 items-center w-full sm:w-auto">
                   {/* Legendary Toggle */}
                   <div className="flex items-center space-x-2">
@@ -736,7 +734,7 @@ export default function Home() {
                     >
                       <span className={`inline-block h-3 w-3 sm:h-4 sm:w-4 transform rounded-full bg-white transition-transform duration-200 ${showLegendaryOnly ? 'translate-x-4 sm:translate-x-6' : 'translate-x-1'}`} />
                     </button>
-                    <span className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300">Legendary & Mythical</span>
+                    <span className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300">Legendary</span>
                   </div>
 
                   {/* Shiny Toggle */}
@@ -748,7 +746,7 @@ export default function Home() {
                       <span className={`inline-block h-3 w-3 sm:h-4 sm:w-4 transform rounded-full bg-white transition-transform duration-200 ${showShinyOnly ? 'translate-x-4 sm:translate-x-6' : 'translate-x-1'}`} />
                     </button>
                     <span className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center">
-                      <img src="/masklicon.png" alt="Shiny" className="w-5 h-5 sm:w-6 sm:h-6 mr-1" /> Shiny
+                      <img src="/masklicon.png" alt="Shiny" className="w-4 h-4 sm:w-5 sm:h-5 mr-1" /> Shiny
                     </span>
                   </div>
 
@@ -760,9 +758,7 @@ export default function Home() {
                     >
                       <span className={`inline-block h-3 w-3 sm:h-4 sm:w-4 transform rounded-full bg-white transition-transform duration-200 ${showOwnedOnly ? 'translate-x-4 sm:translate-x-6' : 'translate-x-1'}`} />
                     </button>
-                    <span className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center">
-                      📦 Owned
-                    </span>
+                    <span className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300">📦 Owned</span>
                   </div>
                 </div>
               </div>
@@ -832,8 +828,7 @@ export default function Home() {
                 ))}
               </div>
 
-              {/* Load More Indicator */}
-              <div className="text-center mt-8">
+              <div className="text-center mt-8 pb-8">
                 {loadingMore ? (
                   <div className="flex items-center justify-center space-x-2">
                     <div className="w-8 h-8 border-4 border-green-500 border-t-transparent rounded-full animate-spin"></div>

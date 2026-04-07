@@ -2,6 +2,10 @@ import axios from 'axios';
 
 const POKEAPI_BASE_URL = 'https://pokeapi.co/api/v2';
 
+/* =========================
+   TYPES
+========================= */
+
 export interface Pokemon {
   id: number;
   name: string;
@@ -18,82 +22,18 @@ export interface Pokemon {
       };
     };
   };
-  types: Array<{
-    type: {
-      name: string;
-    };
-  }>;
+  types: Array<{ type: { name: string } }>;
   height: number;
   weight: number;
   stats: Array<{
     base_stat: number;
-    stat: {
-      name: string;
-    };
+    stat: { name: string };
   }>;
   abilities: Array<{
-    ability: {
-      name: string;
-    };
+    ability: { name: string };
     is_hidden: boolean;
   }>;
-  species: {
-    url: string;
-  };
-}
-
-export interface PokemonSpecies {
-  id: number;
-  name: string;
-  evolution_chain: {
-    url: string;
-  };
-  pokedex_numbers: Array<{
-    pokedex_number: number;
-    pokedex: {
-      name: string;
-    };
-  }>;
-}
-
-export interface PokemonMove {
-  move: {
-    name: string;
-    url: string;
-  };
-  version_group_details: Array<{
-    move_learn_method: {
-      name: string;
-    };
-    level_learned_at: number;
-    version_group: {
-      name: string;
-    };
-  }>;
-}
-
-export interface PokemonFullData {
-  id: number;
-  name: string;
-  abilities: Array<{
-    ability: {
-      name: string;
-      url: string;
-    };
-    is_hidden: boolean;
-    slot: number;
-  }>;
-  moves: Array<PokemonMove>;
-  types: Array<{
-    type: {
-      name: string;
-    };
-  }>;
-  sprites: Pokemon['sprites'];
-  height: number;
-  weight: number;
-  stats: Pokemon['stats'];
-  species: Pokemon['species'];
+  species: { url: string };
 }
 
 export interface PokemonListResponse {
@@ -106,75 +46,108 @@ export interface PokemonListResponse {
   }>;
 }
 
-export async function getPokemonList(limit: number = 20, offset: number = 0): Promise<PokemonListResponse> {
-  try {
-    const response = await axios.get(`${POKEAPI_BASE_URL}/pokemon?limit=${limit}&offset=${offset}`);
-    return response.data;
-  } catch (error) {
-    console.error('Error fetching Pokemon list:', error);
-    throw error;
-  }
+export interface PokemonFullData extends Pokemon {
+  abilities: Array<{
+    ability: { name: string; url: string };
+    is_hidden: boolean;
+    slot: number;
+  }>;
+  moves: any[];
 }
 
-export async function getPokemonDetails(nameOrId: string | number): Promise<Pokemon> {
-  try {
-    const response = await axios.get(`${POKEAPI_BASE_URL}/pokemon/${nameOrId}`);
-    return response.data;
-  } catch (error) {
-    console.error('Error fetching Pokemon details:', error);
-    throw error;
-  }
-}
+/* =========================
+   API: BASIC FETCH
+========================= */
 
-export async function getPopularPokemon(limit: number = 12): Promise<Pokemon[]> {
-  const popularPokemonIds = [
-    25,  // Pikachu
-    6,   // Charizard
-    150, // Mewtwo
-    94,  // Gengar
-    149, // Dragonite
-    448, // Lucario
-    658, // Greninja
-    887, // Dragapult
-    898, // Calyrex
-    248, // Tyranitar
-    445, // Garchomp
-    143  // Snorlax
-  ];
-
-  console.log('Fetching Pokemon IDs:', popularPokemonIds.slice(0, limit));
-  
-  const pokemonPromises = popularPokemonIds.slice(0, limit).map(id => 
-    getPokemonDetails(id).catch(err => {
-      console.error(`Failed to fetch Pokemon ${id}:`, err);
-      return null;
-    })
+export async function getPokemonList(limit = 20, offset = 0) {
+  const res = await axios.get<PokemonListResponse>(
+    `${POKEAPI_BASE_URL}/pokemon?limit=${limit}&offset=${offset}`
   );
+  return res.data;
+}
+
+export async function getPokemonDetails(nameOrId: string | number) {
+  const res = await axios.get<Pokemon>(
+    `${POKEAPI_BASE_URL}/pokemon/${nameOrId}`
+  );
+  return res.data;
+}
+
+/* =========================
+   🔥 FIX: GET ALL POKEMON
+========================= */
+
+export async function getAllPokemon() {
+  let all: PokemonListResponse['results'] = [];
+  let url: string | null = `${POKEAPI_BASE_URL}/pokemon?limit=100&offset=0`;
 
   try {
-    const pokemonResults = await Promise.all(pokemonPromises);
-    const pokemon = pokemonResults.filter(p => p !== null) as Pokemon[];
-    console.log('Successfully fetched Pokemon:', pokemon.length);
-    return pokemon;
-  } catch (error) {
-    console.error('Error fetching popular Pokemon:', error);
-    throw error;
+    while (url) {
+      const res: { data: PokemonListResponse } = await axios.get(url);
+      all = [...all, ...res.data.results];
+      url = res.data.next;
+    }
+
+    return all;
+  } catch (err) {
+    console.error('Error fetching all Pokemon:', err);
+    throw err;
   }
 }
 
-export function getPokemonImageUrl(pokemon: Pokemon, isShiny: boolean = false): string {
-  if (isShiny) {
-    return pokemon.sprites.other['official-artwork'].front_shiny || pokemon.sprites.front_shiny;
+/* =========================
+   POPULAR POKEMON
+========================= */
+
+const POPULAR_IDS = [
+  25, 6, 150, 94, 149, 448,
+  658, 887, 898, 248, 445, 143
+];
+
+export async function getPopularPokemon(limit = 12): Promise<Pokemon[]> {
+  try {
+    const results = await Promise.all(
+      POPULAR_IDS.slice(0, limit).map(id =>
+        getPokemonDetails(id).catch(err => {
+          console.error(`Failed Pokémon ${id}`, err);
+          return null;
+        })
+      )
+    );
+
+    return results.filter(Boolean) as Pokemon[];
+  } catch (err) {
+    console.error('Error fetching popular Pokemon:', err);
+    throw err;
   }
-  return pokemon.sprites.other['official-artwork'].front_default || pokemon.sprites.front_default;
 }
 
-export function formatPokemonName(name: string): string {
+/* =========================
+   IMAGE HELPER
+========================= */
+
+export function getPokemonImageUrl(
+  pokemon: Pokemon,
+  isShiny = false
+): string {
+  const official =
+    pokemon.sprites.other['official-artwork'];
+
+  return isShiny
+    ? official.front_shiny || pokemon.sprites.front_shiny
+    : official.front_default || pokemon.sprites.front_default;
+}
+
+/* =========================
+   UTILS
+========================= */
+
+export function formatPokemonName(name: string) {
   return name.charAt(0).toUpperCase() + name.slice(1);
 }
 
-export function getPokemonTypeColor(type: string): string {
-  const typeColors: { [key: string]: string } = {
+export function getPokemonTypeColor(type: string) {
+  const colors: Record<string, string> = {
     normal: 'bg-gray-400',
     fire: 'bg-red-500',
     water: 'bg-blue-500',
@@ -194,59 +167,71 @@ export function getPokemonTypeColor(type: string): string {
     steel: 'bg-gray-500',
     fairy: 'bg-pink-400'
   };
-  
-  return typeColors[type] || 'bg-gray-400';
+
+  return colors[type] || 'bg-gray-400';
 }
 
-const pokemonFullDataCache: Map<number, PokemonFullData> = new Map();
+/* =========================
+   FULL DATA CACHE
+========================= */
 
-export async function getPokemonFullData(nameOrId: string | number): Promise<PokemonFullData> {
-  const id = typeof nameOrId === 'number' ? nameOrId : parseInt(nameOrId);
-  
-  if (pokemonFullDataCache.has(id)) {
-    return pokemonFullDataCache.get(id)!;
-  }
-  
-  try {
-    const response = await axios.get(`${POKEAPI_BASE_URL}/pokemon/${nameOrId}`);
-    const data = response.data as PokemonFullData;
-    pokemonFullDataCache.set(id, data);
-    return data;
-  } catch (error) {
-    console.error('Error fetching Pokemon full data:', error);
-    throw error;
-  }
+const cache = new Map<number, PokemonFullData>();
+
+export async function getPokemonFullData(nameOrId: string | number) {
+  const id = Number(nameOrId);
+
+  if (cache.has(id)) return cache.get(id)!;
+
+  const res = await axios.get<PokemonFullData>(
+    `${POKEAPI_BASE_URL}/pokemon/${nameOrId}`
+  );
+
+  cache.set(id, res.data);
+  return res.data;
 }
 
-export function getPokemonAbilities(pokemon: PokemonFullData): string[] {
-  return pokemon.abilities.map(a => 
-    a.ability.name.charAt(0).toUpperCase() + a.ability.name.slice(1).replace(/-/g, ' ')
+/* =========================
+   ABILITIES
+========================= */
+
+export function getPokemonAbilities(pokemon: PokemonFullData) {
+  return pokemon.abilities.map(a =>
+    a.ability.name
+      .replace(/-/g, ' ')
+      .replace(/\b\w/g, c => c.toUpperCase())
   );
 }
+
+/* =========================
+   MOVES FILTER (GAME BASED)
+========================= */
 
 const GAME_VERSION_GROUPS: Record<string, string[]> = {
   'scarlet-violet': ['scarlet-violet'],
   'sword-shield': ['sword-shield'],
-  'bdsp': ['brilliant-diamond-shining-pearl'],
-  'legends-arceus': ['legends-arceus'],
-  'legends-za': ['scarlet-violet']
+  bdsp: ['brilliant-diamond-shining-pearl'],
+  'legends-arceus': ['legends-arceus']
 };
 
-export function getPokemonMovesForGame(pokemon: PokemonFullData, game: string): string[] {
-  const validVersionGroups = GAME_VERSION_GROUPS[game] || ['scarlet-violet'];
-  
+export function getPokemonMovesForGame(
+  pokemon: PokemonFullData,
+  game: string
+) {
+  const valid = GAME_VERSION_GROUPS[game] || ['scarlet-violet'];
   const moves = new Set<string>();
-  
-  for (const moveData of pokemon.moves) {
-    for (const versionDetail of moveData.version_group_details) {
-      if (validVersionGroups.includes(versionDetail.version_group.name)) {
-        const moveName = moveData.move.name.charAt(0).toUpperCase() + 
-          moveData.move.name.slice(1).replace(/-/g, ' ');
-        moves.add(moveName);
+
+  for (const move of pokemon.moves) {
+    for (const v of move.version_group_details || []) {
+      if (valid.includes(v.version_group.name)) {
+        moves.add(
+          move.move.name
+            .replace(/-/g, ' ')
+            .replace(/\b\w/g, (c: string)  => c.toUpperCase())
+        );
         break;
       }
     }
   }
-  
+
   return Array.from(moves).sort();
 }
