@@ -22,7 +22,7 @@ export default function LastPremiumPage() {
                 <h3 className="text-xl font-bold text-white mb-2">Legendary Pokémon</h3>
                 <p className="text-white/90 mb-4">Ultra-rare collection with special abilities</p>
                 <button className="bg-white text-purple-600 px-6 py-2 rounded-lg font-semibold hover:bg-gray-100 transition-colors">
-                  View Collection
+                  Purchase with Stripe
                 </button>
               </div>
               <div className="bg-white/20 backdrop-blur-sm rounded-lg p-6">
@@ -30,7 +30,7 @@ export default function LastPremiumPage() {
                 <h3 className="text-xl font-bold text-white mb-2">Premium Items</h3>
                 <p className="text-white/90 mb-4">Exclusive gear and rare items</p>
                 <button className="bg-white text-purple-600 px-6 py-2 rounded-lg font-semibold hover:bg-gray-100 transition-colors">
-                  Browse Items
+                  Purchase with Stripe
                 </button>
               </div>
             </div>
@@ -53,7 +53,7 @@ export default function LastPremiumPage() {
                   <div className="flex justify-between items-center">
                     <span className="text-2xl font-bold text-purple-600">$99.99</span>
                     <button className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors">
-                      Get Now
+                      Purchase with Stripe
                     </button>
                   </div>
                 </div>

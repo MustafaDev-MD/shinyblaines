@@ -954,6 +954,7 @@ export default function BottomSheet({ isOpen, onClose, pokemon }: BottomSheetPro
   const { addOwnedPokemon, isOwned, addTradeToHistory } = usePokedex();
   const { user } = useAuth();
   const pokemonOwned = isOwned?.(pokemon.id) ?? false;
+  const [lastMessageId, setLastMessageId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!pokemon?.abilities?.length) return;
@@ -1117,10 +1118,10 @@ export default function BottomSheet({ isOpen, onClose, pokemon }: BottomSheetPro
   // ─── Polling — Live Discord Message Fetch ───────────────────────────────────────
   useEffect(() => {
     if (!isPolling || !showModal) return;
-    if (modalContent?.linkCode && modalContent.linkCode !== 'WAITING') {
-      setIsPolling(false);
-      return;
-    }
+    // if (modalContent?.linkCode && modalContent.linkCode !== 'WAITING') {
+    //   setIsPolling(false);
+    //   return;
+    // }
 
     const game = modalContent?.game || selectedGame;
     const discordName = customData.ot || user?.displayName || 'Guest';
@@ -1136,8 +1137,13 @@ export default function BottomSheet({ isOpen, onClose, pokemon }: BottomSheetPro
         if (!result.success) return;
 
         // 🔥 Real Discord message direct set karo (no hardcoded message)
-        if (result.message) {
-          setLatestMessage(result.message); // 🔥 always show
+        // if (result.message) {
+        //   setLatestMessage(result.message); // 🔥 always show
+        // }
+
+        if (result.message && result.message.id !== lastMessageId) {
+          setLatestMessage(result.message);
+          setLastMessageId(result.message.id);
         }
 
         if (result.isError) {
@@ -1164,9 +1170,9 @@ export default function BottomSheet({ isOpen, onClose, pokemon }: BottomSheetPro
 
           if (result.linkCode && result.linkCode !== 'WAITING') {
             next.linkCode = result.linkCode;
-            next.title = 'Trade Ready! ✨';
+            next.title = 'Trade Ready!';
             next.botIGN = result.botIGN;
-            setIsPolling(false);
+            // setIsPolling(false);
           }
           return next;
         });
@@ -1221,6 +1227,10 @@ export default function BottomSheet({ isOpen, onClose, pokemon }: BottomSheetPro
   const getInitials = (name: string) => name.slice(0, 2).toUpperCase();
   const isBotName = (name: string) => ['bot', 'sysbot', 'trade', 'auto', 'rose'].some(k => name.toLowerCase().includes(k));
 
+  const isErrorMsg = (text: string) =>
+    text.toLowerCase().includes('oops') ||
+    text.toLowerCase().includes('cancel');
+
   if (!isOpen) return null;
 
   return (
@@ -1232,10 +1242,31 @@ export default function BottomSheet({ isOpen, onClose, pokemon }: BottomSheetPro
           {/* Header */}
           <div className="bg-gradient-to-r from-blue-600 to-cyan-600 px-4 py-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="relative">
+              {/* <div className="relative">
                 <img src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${pokemon.id}.png`} alt={pokemon.name} className="w-14 h-14 sm:w-16 sm:h-16 bg-white/90 rounded-full p-1" />
                 {customData.shiny && (
                   <div className="absolute -top-1 -right-1 bg-white/80 rounded-full p-1 shadow">
+                    <img src="/masklicon.png" alt="Shiny" className="w-5 h-5" />
+                  </div>
+                )}
+              </div> */}
+              <div className="relative">
+                <img
+                  src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${pokemon.id}.png`}
+                  alt={pokemon.name}
+                  className="w-14 h-14 sm:w-16 sm:h-16 bg-white/90 rounded-full p-1"
+                />
+
+                {/* SHINY ICON (sparkle style only) */}
+                {customData.shiny && (
+                  <div className="absolute -top-1 -right-1">
+                    <span className="text-yellow-300 text-lg drop-shadow">✨</span>
+                  </div>
+                )}
+
+                {/* ALPHA ICON (separate badge) */}
+                {customData.alpha && (
+                  <div className="absolute -bottom-1 -right-1 bg-white/80 text-white text-[10px] rounded-full shadow">
                     <img src="/masklicon.png" alt="Shiny" className="w-5 h-5" />
                   </div>
                 )}
@@ -1553,10 +1584,17 @@ export default function BottomSheet({ isOpen, onClose, pokemon }: BottomSheetPro
                           </span>
                         </div>
 
-                        <p className="text-sm text-gray-200 leading-relaxed break-words whitespace-pre-wrap">
+                        {/* <p className="text-sm text-gray-200 leading-relaxed break-words whitespace-pre-wrap">
+                          {latestMessage.content}
+                        </p> */}
+                        <p
+                          className={`text-sm leading-relaxed break-words whitespace-pre-wrap ${isErrorMsg(latestMessage.content)
+                              ? 'text-red-400 font-semibold'
+                              : 'text-gray-200'
+                            }`}
+                        >
                           {latestMessage.content}
                         </p>
-
                       </div>
                     </div>
                   )}

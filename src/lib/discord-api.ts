@@ -161,8 +161,43 @@ export function getDmChannelForGame(game: string): string | undefined {
   );
 }
 
+// export function generateDiscordCommand(data: any): string {
+//   const lines: string[] = [`!t ${data.pokemonName}`];
+//   if (data.nickname) lines.push(`Nickname: ${data.nickname}`);
+//   if (data.ot) lines.push(`OT: ${data.ot}`);
+//   if (data.tid) lines.push(`TID: ${data.tid}`);
+//   if (data.sid) lines.push(`SID: ${data.sid}`);
+//   if (data.ability) lines.push(`Ability: ${data.ability}`);
+//   if (data.ball) lines.push(`Ball: ${data.ball}`);
+//   if (data.item && data.item !== 'None') lines.push(`Held Item: ${data.item}`);
+//   lines.push(`Level: ${data.level || 100}`);
+//   if (data.teraType) lines.push(`Tera Type: ${data.teraType}`);
+//   if (data.shiny) lines.push(`Shiny: Yes`);
+//   lines.push(`${data.nature} Nature`);
+//   if (Array.isArray(data.moves)) {
+//     data.moves.filter(Boolean).forEach((m: string) => lines.push(`Move: ${m}`));
+//   }
+  
+//   const ivs = data.ivs || { hp: 31, atk: 31, def: 31, spa: 31, spd: 31, spe: 31 };
+//   lines.push(`IVs: ${ivs.hp} HP / ${ivs.atk} Atk / ${ivs.def} Def / ${ivs.spa} SpA / ${ivs.spd} SpD / ${ivs.spe} Spe`);
+  
+//   return lines.join('\n');
+// }
+
 export function generateDiscordCommand(data: any): string {
-  const lines: string[] = [`!t ${data.pokemonName}`];
+  const formatPokemonName = (name: string) => {
+    return name
+      .trim()
+      .replace(/\s+/g, ' ')
+      .replace(/ galar/i, '-Galar')
+      .replace(/ alolan/i, '-Alola')
+      .replace(/ hisuian/i, '-Hisuian')
+      .replace(/ paldean/i, '-Paldea')
+      .replace(/ /g, '-');
+  };
+
+  const lines: string[] = [`!t ${formatPokemonName(data.pokemonName)}`];
+
   if (data.nickname) lines.push(`Nickname: ${data.nickname}`);
   if (data.ot) lines.push(`OT: ${data.ot}`);
   if (data.tid) lines.push(`TID: ${data.tid}`);
@@ -170,17 +205,31 @@ export function generateDiscordCommand(data: any): string {
   if (data.ability) lines.push(`Ability: ${data.ability}`);
   if (data.ball) lines.push(`Ball: ${data.ball}`);
   if (data.item && data.item !== 'None') lines.push(`Held Item: ${data.item}`);
+  
   lines.push(`Level: ${data.level || 100}`);
+
   if (data.teraType) lines.push(`Tera Type: ${data.teraType}`);
   if (data.shiny) lines.push(`Shiny: Yes`);
+
   lines.push(`${data.nature} Nature`);
+
   if (Array.isArray(data.moves)) {
     data.moves.filter(Boolean).forEach((m: string) => lines.push(`Move: ${m}`));
   }
-  
-  const ivs = data.ivs || { hp: 31, atk: 31, def: 31, spa: 31, spd: 31, spe: 31 };
-  lines.push(`IVs: ${ivs.hp} HP / ${ivs.atk} Atk / ${ivs.def} Def / ${ivs.spa} SpA / ${ivs.spd} SpD / ${ivs.spe} Spe`);
-  
+
+  const ivs = data.ivs || {
+    hp: 31,
+    atk: 31,
+    def: 31,
+    spa: 31,
+    spd: 31,
+    spe: 31,
+  };
+
+  lines.push(
+    `IVs: ${ivs.hp} HP / ${ivs.atk} Atk / ${ivs.def} Def / ${ivs.spa} SpA / ${ivs.spd} SpD / ${ivs.spe} Spe`
+  );
+
   return lines.join('\n');
 }
 

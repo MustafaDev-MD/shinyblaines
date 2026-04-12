@@ -142,8 +142,37 @@ export function getPokemonImageUrl(
    UTILS
 ========================= */
 
+// export function formatPokemonName(name: string) {
+//   return name.charAt(0).toUpperCase() + name.slice(1);
+// }
+
 export function formatPokemonName(name: string) {
-  return name.charAt(0).toUpperCase() + name.slice(1);
+  return name
+    .replace(/-/g, ' ') // dash → space
+    .replace(/\b\w/g, (char) => char.toUpperCase()); // har word capital
+}
+
+export const getPokemonForms = async (id: number) => {
+  try {
+    const res = await fetch(`https://pokeapi.co/api/v2/pokemon-species/${id}`);
+    const data = await res.json();
+
+    const forms = data.varieties.map((v: any) => v.pokemon.name);
+
+    return forms; // ["articuno", "articuno-galar"]
+  } catch (err) {
+    console.error('Failed to fetch forms', err);
+    return [];
+  }
+};
+
+export function formatPokemonNameForCommand(name: string): string {
+  return name
+    .trim()
+    // multiple spaces → single space
+    .replace(/\s+/g, ' ')
+    // space → hyphen
+    .replace(/ /g, '-');
 }
 
 export function getPokemonTypeColor(type: string) {
@@ -226,7 +255,7 @@ export function getPokemonMovesForGame(
         moves.add(
           move.move.name
             .replace(/-/g, ' ')
-            .replace(/\b\w/g, (c: string)  => c.toUpperCase())
+            .replace(/\b\w/g, (c: string) => c.toUpperCase())
         );
         break;
       }

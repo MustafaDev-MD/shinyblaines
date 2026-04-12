@@ -7,6 +7,7 @@ import BottomSheet from './BottomSheet';
 
 interface PokemonCardProps {
   pokemon: Pokemon;
+  forms?: Pokemon[];
   showShiny?: boolean;
 }
 
@@ -65,19 +66,14 @@ export default function PokemonCard({ pokemon, showShiny = false }: PokemonCardP
       >
       {/* Shiny sparkles overlay */}
       {showShiny && isHovered && (
-        <div className="absolute inset-0 pointer-events-none z-20">
-          {/* Subtle sparkling effect */}
-          <div className="absolute inset-0 overflow-hidden">
-            <div className="absolute top-1/4 left-1/4 w-1 h-1 bg-yellow-300 rounded-full animate-ping animation-duration-2000" />
-            <div className="absolute top-3/4 right-1/4 w-1 h-1 bg-yellow-200 rounded-full animate-ping animation-duration-3000 animation-delay-500" />
-            <div className="absolute top-1/2 right-1/3 w-1 h-1 bg-yellow-300 rounded-full animate-ping animation-duration-2500 animation-delay-1000" />
-            <div className="absolute bottom-1/4 left-1/3 w-1 h-1 bg-yellow-200 rounded-full animate-ping animation-duration-3500 animation-delay-1500" />
-            <div className="absolute top-1/3 left-1/2 w-1 h-1 bg-yellow-400 rounded-full animate-ping animation-duration-2000 animation-delay-2000" />
-          </div>
-          <div className="absolute top-2 right-2 z-30">
-            <span className="px-2 py-1 bg-black/20 backdrop-blur-sm text-white text-xs font-bold rounded-full shadow-sm">
-              <img src="/masklicon.png" alt="Shiny" className="w-6 h-6" />
-            </span>
+        <div className="absolute inset-0 pointer-events-none z-20 flex items-center justify-center">
+          {/* Starry sparkle effect centered over the Pokemon */}
+          <div className="relative w-full h-full">
+            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-yellow-300 text-2xl animate-ping animation-duration-1000">★</div>
+            <div className="absolute top-1/3 left-1/3 transform -translate-x-1/2 -translate-y-1/2 text-yellow-200 text-xl animate-ping animation-duration-1200 animation-delay-200">★</div>
+            <div className="absolute top-2/3 right-1/3 transform translate-x-1/2 -translate-y-1/2 text-yellow-300 text-2xl animate-ping animation-duration-1400 animation-delay-400">★</div>
+            <div className="absolute bottom-1/3 left-2/3 transform -translate-x-1/2 translate-y-1/2 text-yellow-200 text-xl animate-ping animation-duration-1000 animation-delay-600">★</div>
+            <div className="absolute top-1/4 right-1/4 transform translate-x-1/2 -translate-y-1/2 text-yellow-400 text-2xl animate-ping animation-duration-1600 animation-delay-800">★</div>
           </div>
         </div>
       )}

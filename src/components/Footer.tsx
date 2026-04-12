@@ -35,7 +35,7 @@ export default function Footer() {
 
   return (
     <div className="py-8 text-center text-gray-500 text-sm">
-      © 2024 Shiny Blaines. All rights reserved.
+      © 2026 Shiny Blaines. All rights reserved.
     </div>
   );
 }

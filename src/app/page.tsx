@@ -71,18 +71,18 @@
 //       }
 
 //       let allIds = gamePokemonIds[selectedGame] || gamePokemonIds.all;
-      
+
 //       if (showLegendaryOnly) {
 //         allIds = allIds.filter(id => legendaryMythicalIds.includes(id));
 //       }
-      
+
 //       if (showShinyOnly) {
 //         // For demo purposes, show some popular Pokemon as "shiny available"
 //         // In a real app, this would come from user data or API
 //         const shinyAvailablePokemonIds = [25, 6, 150, 94, 149, 448, 658, 887, 898, 248, 445, 143, 778, 4, 1, 115, 131, 142, 181, 212, 214, 229, 282, 303, 306, 308, 310, 354, 376, 384, 414, 426, 428, 445, 460, 475, 479, 487, 497, 508, 521, 531, 534, 617, 718, 720, 773, 785, 788, 791, 794, 797, 800, 803, 806, 809, 812, 815, 818, 821, 824, 827, 830, 833, 888, 891, 894, 897, 900, 903, 906];
 //         allIds = allIds.filter(id => shinyAvailablePokemonIds.includes(id));
 //       }
-      
+
 //       if (showOwnedOnly) {
 //         const ownedIds = ownedPokemon.map(p => p.id);
 //         allIds = allIds.filter(id => ownedIds.includes(id));
@@ -95,7 +95,7 @@
 
 //       const idsToLoad = allIds.slice(startOffset, startOffset + 40);
 //       console.log('Loading Pokemon from offset', startOffset, 'IDs:', idsToLoad);
-      
+
 //       const pokemonPromises = idsToLoad.map((id: number) => 
 //         getPokemonDetails(id).catch((err: any) => {
 //           console.error(`Failed to fetch Pokemon ${id}:`, err);
@@ -151,7 +151,7 @@
 //       const threshold = 500;
 //       const scrollPosition = window.innerHeight + document.documentElement.scrollTop;
 //       const documentHeight = document.documentElement.offsetHeight;
-      
+
 //       console.log('Scroll:', {
 //         position: scrollPosition,
 //         height: documentHeight,
@@ -161,7 +161,7 @@
 //         hasMore,
 //         offset
 //       });
-      
+
 //       if (
 //         scrollPosition >= documentHeight - threshold &&
 //         !loading && !loadingMore && hasMore
@@ -173,10 +173,10 @@
 
 //     // Add scroll listener
 //     window.addEventListener('scroll', handleScroll);
-    
+
 //     // Initial check in case content is already short
 //     setTimeout(handleScroll, 1000);
-    
+
 //     return () => window.removeEventListener('scroll', handleScroll);
 //   }, [loading, loadingMore, offset, hasMore, selectedGame, showLegendaryOnly, showShinyOnly, showOwnedOnly, sortBy]);
 //   const features = [
@@ -227,7 +227,7 @@
 // {/* Controls Header */}
 //             <div className="py-3 sm:py-4">
 //                 <div className="flex flex-col sm:flex-row flex-wrap justify-center gap-3 sm:gap-4 items-start sm:items-center bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-[#d1fae5] dark:border-gray-700 p-3 sm:p-4 transition-colors duration-300">
-                 
+
 //                  {/* Dropdowns Row */}
 //                  <div className="flex flex-wrap gap-3 sm:gap-4 w-full sm:w-auto">
 //                     {/* Game Dropdown */}
@@ -357,7 +357,7 @@
 //                  </div>
 //                </div>
 //            </div>
-           
+
 //             {loading ? (
 //               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-3 sm:gap-4">
 //                 {[...Array(8)].map((_, index) => (
@@ -421,7 +421,7 @@
 //                         />
 //                       ))}
 //                     </div>
-               
+
 // {/* Load More Indicator */}
 //                 <div className="text-center mt-8">
 //                   {loadingMore ? (
@@ -449,11 +449,11 @@
 //                 </div>
 //              </>
 //            )}
-           
-           
+
+
 //          </div>
 // </section>
-        
+
 //        <Footer />
 //      </div>
 //    );
@@ -489,18 +489,22 @@ export default function Home() {
   useEffect(() => {
     const fetchAllPokemonNames = async () => {
       try {
-        const res = await fetch('https://pokeapi.co/api/v2/pokemon?limit=2000');
+        const res = await fetch('https://pokeapi.co/api/v2/pokemon?limit=11000');
         const data = await res.json();
         setAllPokemonList(data.results);
       } catch (err) {
         console.error('Failed to load pokemon names', err);
       }
     };
-  
+
     fetchAllPokemonNames();
   }, []);
 
-  const allPokemonIds = Array.from({ length: 1025 }, (_, i) => i + 1);
+  // const allPokemonIds = Array.from({ length: 1025 }, (_, i) => i + 1);
+
+  const allPokemonIds = allPokemonList.map(p =>
+    Number(p.url.split('/').filter(Boolean).pop())
+  );
 
   const gamePokemonIds: { [key: string]: number[] } = {
     all: allPokemonIds,
@@ -512,6 +516,16 @@ export default function Home() {
     'lets-go': allPokemonIds
   };
 
+  // const gamePokemonIds: { [key: string]: number[] } = {
+  //   all: allPokemonIds,
+  //   'legends-za': allPokemonIds,
+  //   'scarlet-violet': allPokemonIds,
+  //   'sword-shield': allPokemonIds,
+  //   'bdsp': allPokemonIds,
+  //   'legends-arceus': allPokemonIds,
+  //   'lets-go': allPokemonIds
+  // };
+
   const legendaryMythicalIds = [
     144, 145, 146, 150, 151,
     243, 244, 245, 249, 250, 251,
@@ -519,15 +533,16 @@ export default function Home() {
     480, 481, 482, 483, 484, 485, 486, 487, 488, 489, 490, 491, 492, 493, 494,
     638, 639, 640, 641, 642, 643, 644, 645, 646, 647, 648, 649,
     716, 717, 718, 719, 720, 721,
-    772, 773, 785, 786, 787, 788, 789, 790, 791, 792, 800, 801, 802,
-    887, 888, 889, 890, 891, 892, 893, 894, 895, 896, 897, 898,
-    1008, 1009, 1010,
-    794, 795, 796, 797, 798, 799, 803, 804
+    772, 773, 785, 786, 787, 788, 789, 790, 791, 792, 800, 801, 802, 807, 808, 809,
+    888, 889, 890, 891, 892, 893, 894, 895, 896, 897, 898,
+    1008, 1009, 1010, 1007, 1014, 1015, 1016, 1017, 1024, 1025, 10169, 10000,
+    // 794, 795, 796, 797, 798, 799, 803, 804
   ];
 
   const [pokemonNameCache, setPokemonNameCache] = useState<Record<number, string>>({});
 
   const loadPokemon = async (startOffset: number = 0, append: boolean = false) => {
+    if (allPokemonList.length === 0) return; //
     try {
       if (startOffset === 0) {
         setLoading(true);
@@ -551,23 +566,43 @@ export default function Home() {
         allIds = allIds.filter(id => ownedIds.includes(id));
       }
 
+      // if (searchQuery.trim()) {
+      //   const q = searchQuery.trim().toLowerCase();
+
+      //   const idMatches = allIds.filter(id =>
+      //     String(id).includes(q)
+      //   );
+
+      //   const nameMatches = allPokemonList
+      //     .filter(p => p.name.toLowerCase().includes(q))
+      //     .map(p => Number(p.url.split('/').filter(Boolean).pop()))
+      //     .filter(id => allIds.includes(id));
+
+      //   const combined = [...new Set([...idMatches, ...nameMatches])];
+
+      //   allIds = combined.length > 0 ? combined : allIds.filter(id =>
+      //     String(id).includes(q)
+      //   );
+      // }
+
       if (searchQuery.trim()) {
-        const q = searchQuery.trim().toLowerCase();
-      
+        const normalize = (str: string) =>
+          str.toLowerCase().replace(/[-\s]/g, '');
+
+        const q = normalize(searchQuery);
+
         const idMatches = allIds.filter(id =>
           String(id).includes(q)
         );
-      
+
         const nameMatches = allPokemonList
-          .filter(p => p.name.toLowerCase().includes(q))
+          .filter(p => normalize(p.name).includes(q))
           .map(p => Number(p.url.split('/').filter(Boolean).pop()))
           .filter(id => allIds.includes(id));
-      
+
         const combined = [...new Set([...idMatches, ...nameMatches])];
-      
-        allIds = combined.length > 0 ? combined : allIds.filter(id =>
-          String(id).includes(q)
-        );
+
+        allIds = combined;
       }
 
       const idsToLoad = allIds.slice(startOffset, startOffset + 40);
@@ -617,10 +652,25 @@ export default function Home() {
     }
   };
 
+  // useEffect(() => {
+  //   setOffset(0);
+  //   loadPokemon();
+  // }, [selectedGame, showLegendaryOnly, showShinyOnly, showOwnedOnly, sortBy, searchQuery]);
+
   useEffect(() => {
+    if (allPokemonList.length === 0) return; // 🔥 IMPORTANT
+
     setOffset(0);
     loadPokemon();
-  }, [selectedGame, showLegendaryOnly, showShinyOnly, showOwnedOnly, sortBy, searchQuery]);
+  }, [
+    allPokemonList, // 🔥 add this
+    selectedGame,
+    showLegendaryOnly,
+    showShinyOnly,
+    showOwnedOnly,
+    sortBy,
+    searchQuery
+  ]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -637,9 +687,28 @@ export default function Home() {
     };
 
     window.addEventListener('scroll', handleScroll);
-    setTimeout(handleScroll, 1000);
+    // setTimeout(handleScroll, 1000);
     return () => window.removeEventListener('scroll', handleScroll);
   }, [loading, loadingMore, offset, hasMore, selectedGame, showLegendaryOnly, showShinyOnly, showOwnedOnly, sortBy]);
+
+  const groupBySpecies = (pokemonList: Pokemon[]) => {
+    const map = new Map();
+
+    pokemonList.forEach(p => {
+      const baseName = p.name.replace(/-.*$/, ''); // simple grouping
+
+      if (!map.has(baseName)) {
+        map.set(baseName, []);
+      }
+
+      map.get(baseName).push(p);
+    });
+
+    return Array.from(map.entries()).map(([name, forms]) => ({
+      name,
+      forms
+    }));
+  };
 
   return (
     <div className="min-h-screen bg-white dark:bg-black transition-colors duration-300">

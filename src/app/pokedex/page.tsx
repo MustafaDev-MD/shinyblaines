@@ -29,13 +29,38 @@ export default function PokedexPage() {
   const [isStartingTrade, setIsStartingTrade] = useState(false);
   const [tradeResult, setTradeResult] = useState<TradeResult | null>(null);
 
+  const [showLegendaryOnly, setShowLegendaryOnly] = useState(false);
+
+  const legendaryMythicalIds = [
+    // Generation 1
+    144, 145, 146, 150, 151,
+    // Generation 2  
+    243, 244, 245, 249, 250, 251,
+    // Generation 3
+    377, 378, 379, 380, 381, 382, 383, 384, 385, 386,
+    // Generation 4
+    480, 481, 482, 483, 484, 485, 486, 487, 488, 489, 490, 491, 492, 493, 494,
+    // Generation 5
+    638, 639, 640, 641, 642, 643, 644, 645, 646, 647, 648, 649,
+    // Generation 6
+    716, 717, 718, 719, 720, 721,
+    // Generation 7
+    785, 786, 787, 788, 789, 790, 791, 792, 793, 794, 795, 796, 797, 798, 799, 800, 807, 808, 809,
+    // Generation 8
+    887, 888, 889, 890, 891, 892, 893, 894, 895, 896, 897, 898,
+    // Generation 9
+    905, 1001, 1002, 1003, 1004, 1005, 1006, 1007, 1008, 1009, 1010,
+    // Paradox Pokemon
+    984, 985, 986, 987, 988, 989, 990, 991, 992, 993, 994, 995, 996, 997, 998, 999, 1000,
+  ];
+
   // Different ID ranges per game so list visibly changes when switching games
   const gamePokemonIds: Record<string, number[]> = {
-    'legends-za': Array.from({ length: 200 }, (_, i) => i + 1),           // 1-200
-    'scarlet-violet': Array.from({ length: 200 }, (_, i) => i + 201),     // 201-400
-    'sword-shield': Array.from({ length: 200 }, (_, i) => i + 401),       // 401-600
-    bdsp: Array.from({ length: 200 }, (_, i) => i + 601),                 // 601-800
-    'legends-arceus': Array.from({ length: 200 }, (_, i) => i + 801),    // 801-1000
+    'legends-za': Array.from({ length: 1025 }, (_, i) => i + 1),           // 1-1025
+    'scarlet-violet': Array.from({ length: 1025 }, (_, i) => i + 1),     // 1-1025
+    'sword-shield': Array.from({ length: 1025 }, (_, i) => i + 1),       // 1-1025
+    bdsp: Array.from({ length: 1025 }, (_, i) => i + 1),                 // 1-1025
+    'legends-arceus': Array.from({ length: 1025 }, (_, i) => i + 1),    // 1-1025
   };
 
   // Load Pokémon when game changes
@@ -58,7 +83,11 @@ export default function PokedexPage() {
         setTradeResult(null);
 
         const ids = gamePokemonIds[selectedGame] ?? [];
-        const promises = ids.map(id => getPokemonDetails(id).catch(() => null));
+        let filteredIds = ids;
+        if (showLegendaryOnly) {
+          filteredIds = ids.filter(id => legendaryMythicalIds.includes(id));
+        }
+        const promises = filteredIds.map(id => getPokemonDetails(id).catch(() => null));
         const results = await Promise.all(promises);
         if (cancelled) return;
         const valid = results.filter((p): p is Pokemon => p !== null);
@@ -74,7 +103,7 @@ export default function PokedexPage() {
 
     load();
     return () => { cancelled = true; };
-  }, [selectedGame]);
+  }, [selectedGame, showLegendaryOnly]);
 
   // Filter by search
   useEffect(() => {
@@ -221,6 +250,18 @@ export default function PokedexPage() {
                       className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-xs text-green-900 dark:text-white"
                     />
                   </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="legendary"
+                      checked={showLegendaryOnly}
+                      onChange={e => setShowLegendaryOnly(e.target.checked)}
+                      className="w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded focus:ring-green-500 dark:focus:ring-green-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                    />
+                    <label htmlFor="legendary" className="text-xs text-green-900 dark:text-white">
+                      Legendary & Mythical
+                    </label>
+                  </div>
                 </div>
 
                 {!selectedGame ? (
@@ -244,7 +285,7 @@ export default function PokedexPage() {
                     No Pokémon match your search.
                   </div>
                 ) : (
-                  <div key={selectedGame} className="max-h-[420px] overflow-y-auto pr-1">
+                  <div key={selectedGame + search + showLegendaryOnly} className="max-h-[420px] overflow-y-auto pr-1">
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
                       {filteredList.map(p => {
                         const selected = selectedPokemonIds.includes(p.id);
@@ -379,7 +420,7 @@ export default function PokedexPage() {
                       </span>
                     </div>
                     <p className="text-gray-600 dark:text-gray-400 mb-3">
-                      Refresh the page to start a new trade.
+                      Now start trading in your game using the link code above. The bot will handle the trade automatically.
                     </p>
                     <div className="grid grid-cols-1 gap-3">
                       <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-2">
