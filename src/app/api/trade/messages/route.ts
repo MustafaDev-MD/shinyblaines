@@ -397,9 +397,7 @@ interface LiveMessage {
   source: 'dm' | 'channel';
 }
 
-// ─────────────────────────────
 // FETCH DISCORD MESSAGES
-// ─────────────────────────────
 async function fetchChannelMessages(channelId: string, limit = 25) {
   if (!USER_TOKEN || !channelId) return [];
 
@@ -417,9 +415,7 @@ async function fetchChannelMessages(channelId: string, limit = 25) {
   return await res.json();
 }
 
-// ─────────────────────────────
-// TEXT EXTRACTOR
-// ─────────────────────────────
+// EXTRACT TEXT
 function extractMessageText(msg: any): string {
   const parts: string[] = [];
 
@@ -441,25 +437,19 @@ function extractMessageText(msg: any): string {
   return parts.join('\n').trim();
 }
 
-// ─────────────────────────────
 // LINK CODE
-// ─────────────────────────────
 function extractLinkCode(text: string): string | null {
   const m = text.match(/\b(\d{4})[\s\-]?(\d{4})\b/);
   return m ? `${m[1]} ${m[2]}` : null;
 }
 
-// ─────────────────────────────
 // QUEUE POSITION
-// ─────────────────────────────
 function extractQueue(text: string): number | null {
   const m = text.match(/position:\s*(\d+)/i);
   return m ? Number(m[1]) : null;
 }
 
-// ─────────────────────────────
-// ERROR DETECTOR (FUNCTION ONLY)
-// ─────────────────────────────
+// ERROR DETECTOR
 function isErrorMessage(text: string): boolean {
   const t = text.toLowerCase();
 
@@ -471,16 +461,13 @@ function isErrorMessage(text: string): boolean {
     t.includes('unable') ||
     t.includes('oops') ||
     t.includes('canceled') ||
-    t.includes("wasn't able")
+    t.includes('not found')
   );
 }
 
-// ─────────────────────────────
 // MAIN API
-// ─────────────────────────────
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
-
   const game = searchParams.get('game') || 'scarlet-violet';
 
   const dmChannelId = getDmChannelForGame(game);
@@ -490,55 +477,39 @@ export async function GET(request: NextRequest) {
 
   let queuePosition: number | null = null;
   let linkCode: string | null = null;
-
-  // ✅ FIX: renamed variable (NO CONFLICT)
   let errorFound = false;
 
-  // ─────────────────────────────
-  // 1️⃣ CHANNEL MESSAGES
-  // ─────────────────────────────
+  // CHANNEL
   if (tradeChannelId) {
-    const channelMsgs = await fetchChannelMessages(tradeChannelId, 30);
+    const msgs = await fetchChannelMessages(tradeChannelId, 30);
 
-    const formatted = channelMsgs.map((msg: any) => {
-      const content = extractMessageText(msg);
-
-      return {
+    allMessages.push(
+      ...msgs.map((msg: any) => ({
         id: msg.id,
-        content,
+        content: extractMessageText(msg),
         author: msg.author?.username || 'Bot',
         timestamp: msg.timestamp,
         source: 'channel',
-      };
-    });
-
-    allMessages.push(...formatted);
+      }))
+    );
   }
 
-  // ─────────────────────────────
-  // 2️⃣ DM MESSAGES
-  // ─────────────────────────────
+  // DM
   if (dmChannelId) {
-    const dmMsgs = await fetchChannelMessages(dmChannelId, 30);
+    const msgs = await fetchChannelMessages(dmChannelId, 30);
 
-    const formatted = dmMsgs.map((msg: any) => {
-      const content = extractMessageText(msg);
-
-      return {
+    allMessages.push(
+      ...msgs.map((msg: any) => ({
         id: msg.id,
-        content,
+        content: extractMessageText(msg),
         author: msg.author?.username || 'Bot',
         timestamp: msg.timestamp,
         source: 'dm',
-      };
-    });
-
-    allMessages.push(...formatted);
+      }))
+    );
   }
 
-  // ─────────────────────────────
-  // 3️⃣ SORT BY TIME
-  // ─────────────────────────────
+  // SORT
   allMessages.sort(
     (a, b) =>
       new Date(b.timestamp).getTime() -
@@ -547,21 +518,13 @@ export async function GET(request: NextRequest) {
 
   const latestMessage = allMessages[0] || null;
 
-  // ─────────────────────────────
-  // 4️⃣ PROCESS DATA
-  // ─────────────────────────────
+  // PROCESS
   for (const msg of allMessages) {
     const text = msg.content;
 
-    if (!queuePosition) {
-      queuePosition = extractQueue(text);
-    }
+    if (!queuePosition) queuePosition = extractQueue(text);
+    if (!linkCode) linkCode = extractLinkCode(text);
 
-    if (!linkCode) {
-      linkCode = extractLinkCode(text);
-    }
-
-    // ✅ FIXED LINE (NO CONFLICT NOW)
     if (isErrorMessage(text)) {
       errorFound = true;
     }
@@ -569,19 +532,14 @@ export async function GET(request: NextRequest) {
     if (queuePosition && linkCode) break;
   }
 
-  // ─────────────────────────────
-  // 5️⃣ RESPONSE
-  // ─────────────────────────────
   return NextResponse.json({
     success: true,
-
-    messages: allMessages.slice(0, 10),
     message: latestMessage,
-
+    messages: allMessages.slice(0, 10),
     queuePosition,
     linkCode: errorFound ? null : linkCode,
-
     isError: errorFound,
     botIGN: latestMessage?.author || null,
+    timestamp: latestMessage?.timestamp || null,
   });
 }
